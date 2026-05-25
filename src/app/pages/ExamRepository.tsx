@@ -250,163 +250,161 @@ export default function ExamRepository() {
           sx={{ mb: 4 }}
         />
 
-        <Grid container spacing={3}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%' }}>
           {filteredExams.length === 0 ? (
-            <Grid item xs={12}>
-              <Paper sx={{ p: 4, textAlign: 'center' }}>
-                <Typography variant="h6" color="text.secondary">
-                  No saved exam templates found
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Create one now using the AI Exam Generator.
-                </Typography>
-                <Button variant="outlined" onClick={() => navigate('/exam-generator')}>
-                  Generate Exam
-                </Button>
-              </Paper>
-            </Grid>
+            <Paper sx={{ p: 4, textAlign: 'center', width: '100%' }}>
+              <Typography variant="h6" color="text.secondary">
+                No saved exam templates found
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Create one now using the AI Exam Generator.
+              </Typography>
+              <Button variant="outlined" onClick={() => navigate('/exam-generator')}>
+                Generate Exam
+              </Button>
+            </Paper>
           ) : (
             filteredExams.map((exam) => (
-              <Grid item xs={12} key={exam.id}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    width: '100%',
-                    bgcolor: 'white',
-                    borderRadius: 3,
-                    border: '1px solid #e2e8f0',
-                    borderLeft: '6px solid #9c27b0',
-                    p: 3,
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
-                      borderColor: '#cbd5e1',
-                    },
-                    display: 'flex',
-                    flexDirection: { xs: 'column', md: 'row' },
-                    alignItems: { xs: 'flex-start', md: 'center' },
-                    justifyContent: 'space-between',
-                    gap: 3,
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  {/* Left Section: Icon + Title & Description */}
-                  <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start', flexGrow: 1, minWidth: 0 }}>
-                    <Box sx={{
-                      width: 46,
-                      height: 46,
-                      borderRadius: 2,
-                      background: 'linear-gradient(135deg, #7b1fa2 0%, #9c27b0 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      color: 'white',
-                      boxShadow: '0 4px 12px rgba(156,39,176,0.2)',
-                    }}>
-                      <Quiz sx={{ fontSize: 24 }} />
-                    </Box>
-                    <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                      <Typography
-                        variant="h6"
-                        fontWeight={800}
-                        sx={{
-                          color: 'text.primary',
-                          lineHeight: 1.25,
-                          letterSpacing: '-0.01em',
-                          fontSize: '1.05rem',
-                          mb: 0.5
-                        }}
-                      >
-                        {exam.title}
-                      </Typography>
-                      {exam.description && (
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color: 'text.secondary',
-                            fontSize: '0.82rem',
-                            lineHeight: 1.5,
-                            mb: 1.5,
-                            overflow: 'hidden',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                          }}
-                        >
-                          {exam.description}
-                        </Typography>
-                      )}
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        <Chip label={`Pool: ${exam.questions.length} items`} size="small" color="secondary" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 700 }} />
-                        <Chip label={`Set: ${exam.activeQuestionCount || exam.questions.length} items`} size="small" color="primary" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 700 }} />
-                        <Chip label={`Points Cap: ${exam.totalPoints} pts`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
-                        <Chip label={`Time limit: ${exam.duration}m`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
-                      </Box>
-                    </Box>
-                  </Box>
-
-                  {/* Right Section: Edit, Delete, Assign Actions */}
+              <Paper
+                key={exam.id}
+                elevation={0}
+                sx={{
+                  width: '100%',
+                  minHeight: { md: 110 },
+                  bgcolor: 'white',
+                  borderRadius: 3,
+                  border: '1px solid #e2e8f0',
+                  borderLeft: '6px solid #9c27b0',
+                  p: 3,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                    borderColor: '#cbd5e1',
+                  },
+                  display: 'flex',
+                  flexDirection: { xs: 'column', md: 'row' },
+                  alignItems: { xs: 'flex-start', md: 'center' },
+                  justifyContent: 'space-between',
+                  gap: 3,
+                  boxSizing: 'border-box',
+                }}
+              >
+                {/* Left Section: Icon + Title & Description */}
+                <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start', flexGrow: 1, minWidth: 0 }}>
                   <Box sx={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 2,
+                    background: 'linear-gradient(135deg, #7b1fa2 0%, #9c27b0 100%)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1.5,
+                    justifyContent: 'center',
                     flexShrink: 0,
-                    minWidth: { md: '280px' },
-                    width: { xs: '100%', md: 'auto' },
-                    justifyContent: { xs: 'space-between', md: 'flex-end' },
-                    borderTop: { xs: '1px solid #f1f5f9', md: 'none' },
-                    pt: { xs: 1.5, md: 0 },
-                    mt: { xs: 1, md: 0 }
+                    color: 'white',
+                    boxShadow: '0 4px 12px rgba(156,39,176,0.2)',
                   }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<Edit />}
-                      onClick={() => handleOpenEdit(exam)}
-                      sx={{ fontWeight: 700, height: 32 }}
+                    <Quiz sx={{ fontSize: 24 }} />
+                  </Box>
+                  <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                    <Typography
+                      variant="h6"
+                      fontWeight={800}
+                      sx={{
+                        color: 'text.primary',
+                        lineHeight: 1.25,
+                        letterSpacing: '-0.01em',
+                        fontSize: '1.05rem',
+                        mb: 0.5
+                      }}
                     >
-                      Edit Template
-                    </Button>
-                    
-                    <Button
-                      variant="contained"
-                      size="small"
-                      color="secondary"
-                      startIcon={<CalendarMonth />}
-                      onClick={() => handleOpenAssign(exam.id)}
-                      sx={{ fontWeight: 700, height: 32, px: 2 }}
-                    >
-                      Assign to Class
-                    </Button>
-
-                    <Tooltip title="Delete template">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => {
-                          if (confirm('Delete this template from repository?')) {
-                            deleteExamFromRepository(exam.id);
-                          }
-                        }}
+                      {exam.title}
+                    </Typography>
+                    {exam.description && (
+                      <Typography
+                        variant="body2"
                         sx={{
-                          bgcolor: '#fef2f2',
-                          border: '1px solid #fee2e2',
-                          '&:hover': { bgcolor: '#fee2e2' },
-                          width: 32,
-                          height: 32,
+                          color: 'text.secondary',
+                          fontSize: '0.82rem',
+                          lineHeight: 1.5,
+                          mb: 1.5,
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
                         }}
                       >
-                        <Delete />
-                      </IconButton>
-                    </Tooltip>
+                        {exam.description}
+                      </Typography>
+                    )}
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Chip label={`Pool: ${exam.questions.length} items`} size="small" color="secondary" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 700 }} />
+                      <Chip label={`Set: ${exam.activeQuestionCount || exam.questions.length} items`} size="small" color="primary" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 700 }} />
+                      <Chip label={`Points Cap: ${exam.totalPoints} pts`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
+                      <Chip label={`Time limit: ${exam.duration}m`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
+                    </Box>
                   </Box>
-                </Paper>
-              </Grid>
+                </Box>
+
+                {/* Right Section: Edit, Delete, Assign Actions */}
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  flexShrink: 0,
+                  minWidth: { md: '280px' },
+                  width: { xs: '100%', md: 'auto' },
+                  justifyContent: { xs: 'space-between', md: 'flex-end' },
+                  borderTop: { xs: '1px solid #f1f5f9', md: 'none' },
+                  pt: { xs: 1.5, md: 0 },
+                  mt: { xs: 1, md: 0 }
+                }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Edit />}
+                    onClick={() => handleOpenEdit(exam)}
+                    sx={{ fontWeight: 700, height: 32 }}
+                  >
+                    Edit Template
+                  </Button>
+                  
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="secondary"
+                    startIcon={<CalendarMonth />}
+                    onClick={() => handleOpenAssign(exam.id)}
+                    sx={{ fontWeight: 700, height: 32, px: 2 }}
+                  >
+                    Assign to Class
+                  </Button>
+
+                  <Tooltip title="Delete template">
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => {
+                        if (confirm('Delete this template from repository?')) {
+                          deleteExamFromRepository(exam.id);
+                        }
+                      }}
+                      sx={{
+                        bgcolor: '#fef2f2',
+                        border: '1px solid #fee2e2',
+                        '&:hover': { bgcolor: '#fee2e2' },
+                        width: 32,
+                        height: 32,
+                      }}
+                    >
+                      <Delete />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Paper>
             ))
           )}
-        </Grid>
+        </Box>
       </Paper>
 
       {/* Assign / Schedule Modal */}

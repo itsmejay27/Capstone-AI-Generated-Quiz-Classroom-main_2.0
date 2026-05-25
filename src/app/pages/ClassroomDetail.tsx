@@ -268,37 +268,35 @@ export default function ClassroomDetail() {
 
       {/* TAB 0: EXAMS LIST */}
       {activeTab === 0 && (
-        <Grid container spacing={3}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%' }}>
           {classExams.length === 0 ? (
-            <Grid item xs={12}>
-              <Paper sx={{ p: 5, textAlign: 'center', borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
-                <Box sx={{
-                  width: 80, height: 80, borderRadius: '50%',
-                  bgcolor: 'rgba(25,118,210,0.08)', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2,
-                }}>
-                  <Assignment sx={{ fontSize: 40, color: '#1976d2' }} />
+            <Paper sx={{ p: 5, textAlign: 'center', borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
+              <Box sx={{
+                width: 80, height: 80, borderRadius: '50%',
+                bgcolor: 'rgba(25,118,210,0.08)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2,
+              }}>
+                <Assignment sx={{ fontSize: 40, color: '#1976d2' }} />
+              </Box>
+              <Typography variant="h6" fontWeight="bold" gutterBottom>
+                No exams or quizzes scheduled yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                {isInstructor
+                  ? 'Generate a new exam or assign one from your repository.'
+                  : 'Your instructor has not posted any exams yet. Check back later.'}
+              </Typography>
+              {isInstructor && (
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <Button variant="contained" onClick={() => navigate('/exam-repository')}>
+                    Assign from Repository
+                  </Button>
+                  <Button variant="outlined" onClick={() => navigate('/exam-generator')}>
+                    Generate with AI
+                  </Button>
                 </Box>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  No exams or quizzes scheduled yet
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  {isInstructor
-                    ? 'Generate a new exam or assign one from your repository.'
-                    : 'Your instructor has not posted any exams yet. Check back later.'}
-                </Typography>
-                {isInstructor && (
-                  <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <Button variant="contained" onClick={() => navigate('/exam-repository')}>
-                      Assign from Repository
-                    </Button>
-                    <Button variant="outlined" onClick={() => navigate('/exam-generator')}>
-                      Generate with AI
-                    </Button>
-                  </Box>
-                )}
-              </Paper>
-            </Grid>
+              )}
+            </Paper>
           ) : (
             classExams.map((exam) => {
               const status = !isInstructor ? getExamStatus(exam.id) : null;
@@ -315,155 +313,155 @@ export default function ClassroomDetail() {
               const sc = status ? statusColor[status] : null;
 
               return (
-                <Grid item xs={12} key={exam.id}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      width: '100%',
-                      bgcolor: 'white',
-                      borderRadius: 3,
-                      border: '1px solid #e2e8f0',
-                      borderLeft: `6px solid ${sc ? sc.border : '#1e3a8a'}`,
-                      p: 3,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
-                        borderColor: '#cbd5e1',
-                      },
-                      display: 'flex',
-                      flexDirection: { xs: 'column', md: 'row' },
-                      alignItems: { xs: 'flex-start', md: 'center' },
-                      justifyContent: 'space-between',
-                      gap: 2.5,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    {/* Left Section: Icon + Text Content */}
-                    <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start', flexGrow: 1, minWidth: 0 }}>
-                      <Box sx={{
-                        width: 46,
-                        height: 46,
-                        borderRadius: 2,
-                        background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        color: 'white',
-                        boxShadow: '0 4px 12px rgba(30,58,138,0.2)',
-                      }}>
-                        <Quiz sx={{ fontSize: 24 }} />
-                      </Box>
-                      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 0.5 }}>
-                          <Typography
-                            variant="h6"
-                            fontWeight={800}
-                            sx={{
-                              color: 'text.primary',
-                              lineHeight: 1.25,
-                              letterSpacing: '-0.01em',
-                              fontSize: '1.05rem',
-                            }}
-                          >
-                            {exam.title}
-                          </Typography>
-                          {sc && (
-                            <Chip
-                              size="small"
-                              label={sc.label}
-                              sx={{
-                                bgcolor: sc.bg,
-                                color: sc.text,
-                                border: `1px solid ${sc.border}`,
-                                fontWeight: 700,
-                                fontSize: '0.68rem',
-                                height: 20
-                              }}
-                            />
-                          )}
-                        </Box>
-                        {exam.description && (
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: 'text.secondary',
-                              fontSize: '0.82rem',
-                              lineHeight: 1.5,
-                              mb: 1.5,
-                              overflow: 'hidden',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                            }}
-                          >
-                            {exam.description}
-                          </Typography>
-                        )}
-                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                          {exam.postDate && (
-                            <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                              Posted: {new Date(exam.postDate).toLocaleString()}
-                            </Typography>
-                          )}
-                          {exam.dueDate && (
-                            <Typography variant="caption" color="error.main" fontWeight="700">
-                              Due: {new Date(exam.dueDate).toLocaleString()}
-                            </Typography>
-                          )}
-                        </Box>
-
-                        {!isInstructor && status === 'completed' && attempt?.score !== undefined && (
-                          <Box sx={{ mt: 1.5, p: 1, px: 1.5, bgcolor: '#dcfce7', borderRadius: 2, border: '1px solid #86efac', display: 'inline-block' }}>
-                            <Typography variant="caption" fontWeight="bold" color="success.dark" sx={{ fontSize: '0.75rem' }}>
-                              Score: {attempt.score} / {exam.totalPoints}
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-                    </Box>
-
-                    {/* Right Section: Details Chips & Action Button */}
+                <Paper
+                  key={exam.id}
+                  elevation={0}
+                  sx={{
+                    width: '100%',
+                    minHeight: { md: 110 },
+                    bgcolor: 'white',
+                    borderRadius: 3,
+                    border: '1px solid #e2e8f0',
+                    borderLeft: `6px solid ${sc ? sc.border : '#1e3a8a'}`,
+                    p: 3,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                      borderColor: '#cbd5e1',
+                    },
+                    display: 'flex',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    alignItems: { xs: 'flex-start', md: 'center' },
+                    justifyContent: 'space-between',
+                    gap: 2.5,
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {/* Left Section: Icon + Text Content */}
+                  <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start', flexGrow: 1, minWidth: 0 }}>
                     <Box sx={{
+                      width: 46,
+                      height: 46,
+                      borderRadius: 2,
+                      background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
                       display: 'flex',
-                      flexDirection: { xs: 'row', md: 'column' },
-                      alignItems: { xs: 'center', md: 'flex-end' },
-                      gap: 2,
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       flexShrink: 0,
-                      minWidth: { md: '190px' },
-                      width: { xs: '100%', md: 'auto' },
-                      justifyContent: { xs: 'space-between', md: 'flex-end' },
-                      borderTop: { xs: '1px solid #f1f5f9', md: 'none' },
-                      pt: { xs: 1.5, md: 0 },
-                      mt: { xs: 1, md: 0 }
+                      color: 'white',
+                      boxShadow: '0 4px 12px rgba(30,58,138,0.2)',
                     }}>
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: { md: 1 } }}>
-                        <Chip icon={<Schedule sx={{ fontSize: '13px !important' }} />} label={`${exam.duration} mins`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
-                        <Chip label={`${exam.totalPoints} pts`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
-                        <Chip label={`${exam.activeQuestionCount || exam.questions.length} items`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
+                      <Quiz sx={{ fontSize: 24 }} />
+                    </Box>
+                    <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 0.5 }}>
+                        <Typography
+                          variant="h6"
+                          fontWeight={800}
+                          sx={{
+                            color: 'text.primary',
+                            lineHeight: 1.25,
+                            letterSpacing: '-0.01em',
+                            fontSize: '1.05rem',
+                          }}
+                        >
+                          {exam.title}
+                        </Typography>
+                        {sc && (
+                          <Chip
+                            size="small"
+                            label={sc.label}
+                            sx={{
+                              bgcolor: sc.bg,
+                              color: sc.text,
+                              border: `1px solid ${sc.border}`,
+                              fontWeight: 700,
+                              fontSize: '0.68rem',
+                              height: 20
+                            }}
+                          />
+                        )}
+                      </Box>
+                      {exam.description && (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'text.secondary',
+                            fontSize: '0.82rem',
+                            lineHeight: 1.5,
+                            mb: 1.5,
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                          }}
+                        >
+                          {exam.description}
+                        </Typography>
+                      )}
+                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                        {exam.postDate && (
+                          <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                            Posted: {new Date(exam.postDate).toLocaleString()}
+                          </Typography>
+                        )}
+                        {exam.dueDate && (
+                          <Typography variant="caption" color="error.main" fontWeight="700">
+                            Due: {new Date(exam.dueDate).toLocaleString()}
+                          </Typography>
+                        )}
                       </Box>
 
-                      {isInstructor ? (
-                        <Button size="small" variant="outlined" onClick={() => navigate('/exam-repository')} sx={{ minWidth: 150, fontWeight: 700 }}>
-                          Manage in Repository
-                        </Button>
-                      ) : status === 'completed' ? (
-                        <Button size="small" variant="outlined" color="success" onClick={() => navigate(`/exam/${exam.id}/results`)} sx={{ minWidth: 150, fontWeight: 700 }}>
-                          View Submission
-                        </Button>
-                      ) : (
-                        <Button size="small" variant="contained" disabled={!!isFuture} onClick={() => navigate(`/exam/${exam.id}/take`)} sx={{ minWidth: 150, fontWeight: 700 }}>
-                          {status === 'in-progress' ? 'Continue Exam' : 'Start Exam'}
-                        </Button>
+                      {!isInstructor && status === 'completed' && attempt?.score !== undefined && (
+                        <Box sx={{ mt: 1.5, p: 1, px: 1.5, bgcolor: '#dcfce7', borderRadius: 2, border: '1px solid #86efac', display: 'inline-block' }}>
+                          <Typography variant="caption" fontWeight="bold" color="success.dark" sx={{ fontSize: '0.75rem' }}>
+                            Score: {attempt.score} / {exam.totalPoints}
+                          </Typography>
+                        </Box>
                       )}
                     </Box>
-                  </Paper>
-                </Grid>
+                  </Box>
+
+                  {/* Right Section: Details Chips & Action Button */}
+                  <Box sx={{
+                    display: 'flex',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    alignItems: { xs: 'center', md: 'flex-end' },
+                    gap: 2,
+                    flexShrink: 0,
+                    minWidth: { md: '190px' },
+                    width: { xs: '100%', md: 'auto' },
+                    justifyContent: { xs: 'space-between', md: 'flex-end' },
+                    borderTop: { xs: '1px solid #f1f5f9', md: 'none' },
+                    pt: { xs: 1.5, md: 0 },
+                    mt: { xs: 1, md: 0 }
+                  }}>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: { md: 1 } }}>
+                      <Chip icon={<Schedule sx={{ fontSize: '13px !important' }} />} label={`${exam.duration} mins`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
+                      <Chip label={`${exam.totalPoints} pts`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
+                      <Chip label={`${exam.activeQuestionCount || exam.questions.length} items`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
+                    </Box>
+
+                    {isInstructor ? (
+                      <Button size="small" variant="outlined" onClick={() => navigate('/exam-repository')} sx={{ minWidth: 150, fontWeight: 700 }}>
+                        Manage in Repository
+                      </Button>
+                    ) : status === 'completed' ? (
+                      <Button size="small" variant="outlined" color="success" onClick={() => navigate(`/exam/${exam.id}/results`)} sx={{ minWidth: 150, fontWeight: 700 }}>
+                        View Submission
+                      </Button>
+                    ) : (
+                      <Button size="small" variant="contained" disabled={!!isFuture} onClick={() => navigate(`/exam/${exam.id}/take`)} sx={{ minWidth: 150, fontWeight: 700 }}>
+                        {status === 'in-progress' ? 'Continue Exam' : 'Start Exam'}
+                      </Button>
+                    )}
+                  </Box>
+                </Paper>
               );
             })
           )}
-        </Grid>
+        </Box>
       )}
 
       {/* TAB 1: STUDY MATERIALS */}
@@ -525,132 +523,132 @@ export default function ClassroomDetail() {
               </Typography>
             </Paper>
           ) : (
-            <Grid container spacing={2}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
               {materials.map((mat) => (
-                <Grid item xs={12} key={mat.id}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      width: '100%',
-                      bgcolor: 'white',
-                      borderRadius: 3,
-                      border: '1px solid #e2e8f0',
-                      borderLeft: '6px solid #0288d1',
-                      p: 2.5,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
-                        borderColor: '#cbd5e1',
-                      },
-                      display: 'flex',
-                      flexDirection: { xs: 'column', sm: 'row' },
-                      alignItems: { xs: 'flex-start', sm: 'center' },
-                      justifyContent: 'space-between',
-                      gap: 2,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    {/* Left Section: File Icon + File Info */}
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexGrow: 1, minWidth: 0 }}>
-                      <Box sx={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 2,
-                        bgcolor: '#f0f9ff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        border: '1px solid #bae6fd'
-                      }}>
-                        {getMaterialIcon(mat.name)}
-                      </Box>
-                      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                        <Typography
-                          variant="subtitle2"
-                          fontWeight={800}
-                          sx={{
-                            color: 'text.primary',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            fontSize: '0.92rem',
-                            lineHeight: 1.3
-                          }}
-                        >
-                          {mat.name}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.5, alignItems: 'center' }}>
-                          <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                            Size: {formatFileSize(mat.size)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            &bull;
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Uploaded by {mat.uploadedBy}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            &bull;
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {new Date(mat.uploadedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-
-                    {/* Right Section: View / Delete Action */}
+                <Paper
+                  key={mat.id}
+                  elevation={0}
+                  sx={{
+                    width: '100%',
+                    minHeight: { sm: 76 },
+                    bgcolor: 'white',
+                    borderRadius: 3,
+                    border: '1px solid #e2e8f0',
+                    borderLeft: '6px solid #0288d1',
+                    p: 2.5,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                      borderColor: '#cbd5e1',
+                    },
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    alignItems: { xs: 'flex-start', sm: 'center' },
+                    justifyContent: 'space-between',
+                    gap: 2,
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {/* Left Section: File Icon + File Info */}
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexGrow: 1, minWidth: 0 }}>
                     <Box sx={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 2,
+                      bgcolor: '#f0f9ff',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 1,
+                      justifyContent: 'center',
                       flexShrink: 0,
-                      minWidth: { sm: '160px' },
-                      width: { xs: '100%', sm: 'auto' },
-                      justifyContent: { xs: 'space-between', sm: 'flex-end' },
-                      borderTop: { xs: '1px solid #f1f5f9', sm: 'none' },
-                      pt: { xs: 1.5, sm: 0 },
-                      mt: { xs: 1, sm: 0 }
+                      border: '1px solid #bae6fd'
                     }}>
-                      <Button
-                        size="small"
-                        variant="contained"
-                        startIcon={<Visibility />}
-                        sx={{
-                          fontWeight: 700,
-                          background: 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%)',
-                          px: 2.5,
-                          height: 32,
-                        }}
-                        onClick={() => setViewMaterial(mat)}
-                      >
-                        View Notes
-                      </Button>
-                      {isInstructor && (
-                        <Tooltip title="Delete material">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => setDeleteConfirm(mat.id)}
-                            sx={{
-                              bgcolor: '#fef2f2',
-                              border: '1px solid #fee2e2',
-                              '&:hover': { bgcolor: '#fee2e2' },
-                              width: 32,
-                              height: 32,
-                            }}
-                          >
-                            <Delete fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
+                      {getMaterialIcon(mat.name)}
                     </Box>
-                  </Paper>
-                </Grid>
+                    <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight={800}
+                        sx={{
+                          color: 'text.primary',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          fontSize: '0.92rem',
+                          lineHeight: 1.3
+                        }}
+                      >
+                        {mat.name}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.5, alignItems: 'center' }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                          Size: {formatFileSize(mat.size)}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          &bull;
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Uploaded by {mat.uploadedBy}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          &bull;
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(mat.uploadedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {/* Right Section: View / Delete Action */}
+                  <Box sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    flexShrink: 0,
+                    minWidth: { sm: '160px' },
+                    width: { xs: '100%', sm: 'auto' },
+                    justifyContent: { xs: 'space-between', sm: 'flex-end' },
+                    borderTop: { xs: '1px solid #f1f5f9', sm: 'none' },
+                    pt: { xs: 1.5, sm: 0 },
+                    mt: { xs: 1, sm: 0 }
+                  }}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      startIcon={<Visibility />}
+                      sx={{
+                        fontWeight: 700,
+                        background: 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%)',
+                        px: 2.5,
+                        height: 32,
+                      }}
+                      onClick={() => setViewMaterial(mat)}
+                    >
+                      View Notes
+                    </Button>
+                    {isInstructor && (
+                      <Tooltip title="Delete material">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => setDeleteConfirm(mat.id)}
+                          sx={{
+                            bgcolor: '#fef2f2',
+                            border: '1px solid #fee2e2',
+                            '&:hover': { bgcolor: '#fee2e2' },
+                            width: 32,
+                            height: 32,
+                          }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
+                </Paper>
               ))}
-            </Grid>
+            </Box>
           )}
         </Box>
       )}

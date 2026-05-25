@@ -351,153 +351,153 @@ export default function Dashboard() {
             )}
           </Paper>
         ) : (
-          <Grid container spacing={2}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
             {userClassrooms.map((classroom, idx) => {
               const theme = CARD_GRADIENTS[idx % CARD_GRADIENTS.length];
               return (
-                <Grid item xs={12} key={classroom.id}>
-                  <Paper
-                    onClick={() => navigate(`/classroom/${classroom.id}`)}
-                    elevation={0}
-                    sx={{
-                      width: '100%',
-                      bgcolor: 'white',
-                      borderRadius: 3,
-                      border: '1px solid #e2e8f0',
-                      borderLeft: `6px solid ${theme.accent}`,
-                      p: 3,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
-                        borderColor: '#cbd5e1',
-                      },
-                      display: 'flex',
-                      flexDirection: { xs: 'column', md: 'row' },
-                      alignItems: { xs: 'flex-start', md: 'center' },
-                      justifyContent: 'space-between',
-                      gap: 2.5,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    {/* Left side: Icon + Text Content */}
-                    <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start', flexGrow: 1, minWidth: 0 }}>
-                      <Box sx={{
-                        width: 46,
-                        height: 46,
-                        borderRadius: 2,
-                        background: theme.bg,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        color: 'white',
-                        boxShadow: `0 4px 12px ${theme.shadow}`,
-                      }}>
-                        <School sx={{ fontSize: 24 }} />
-                      </Box>
-                      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                        <Typography
-                          variant="h6"
-                          fontWeight={800}
-                          sx={{
-                            color: 'text.primary',
-                            lineHeight: 1.25,
-                            letterSpacing: '-0.01em',
-                            fontSize: '1.05rem',
-                          }}
-                        >
-                          {classroom.name}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, fontSize: '0.78rem', display: 'block', mt: 0.5 }}>
-                          {classroom.subject} &bull; {classroom.section}
-                        </Typography>
-                        {classroom.description && (
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: 'text.secondary',
-                              fontSize: '0.82rem',
-                              lineHeight: 1.5,
-                              mt: 1,
-                              overflow: 'hidden',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                            }}
-                          >
-                            {classroom.description}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-
-                    {/* Right side: Chips + Action Arrow */}
+                <Paper
+                  key={classroom.id}
+                  onClick={() => navigate(`/classroom/${classroom.id}`)}
+                  elevation={0}
+                  sx={{
+                    width: '100%',
+                    minHeight: { md: 110 },
+                    bgcolor: 'white',
+                    borderRadius: 3,
+                    border: '1px solid #e2e8f0',
+                    borderLeft: `6px solid ${theme.accent}`,
+                    p: 3,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                      borderColor: '#cbd5e1',
+                    },
+                    display: 'flex',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    alignItems: { xs: 'flex-start', md: 'center' },
+                    justifyContent: 'space-between',
+                    gap: 2.5,
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {/* Left side: Icon + Text Content */}
+                  <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start', flexGrow: 1, minWidth: 0 }}>
                     <Box sx={{
+                      width: 46,
+                      height: 46,
+                      borderRadius: 2,
+                      background: theme.bg,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 2,
+                      justifyContent: 'center',
                       flexShrink: 0,
-                      minWidth: { md: '220px' },
-                      width: { xs: '100%', md: 'auto' },
-                      justifyContent: { xs: 'space-between', md: 'flex-end' },
-                      borderTop: { xs: '1px solid #f1f5f9', md: 'none' },
-                      pt: { xs: 1.5, md: 0 },
-                      mt: { xs: 1, md: 0 }
+                      color: 'white',
+                      boxShadow: `0 4px 12px ${theme.shadow}`,
                     }}>
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        <Chip
-                          icon={<People sx={{ fontSize: '14px !important' }} />}
-                          label={`${classroom.students.length} student${classroom.students.length !== 1 ? 's' : ''}`}
-                          size="small"
-                          sx={{
-                            bgcolor: '#f8fafc',
-                            color: '#475569',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            border: '1px solid #e2e8f0',
-                            height: 28,
-                          }}
-                        />
-                        <Chip
-                          icon={<Code sx={{ fontSize: '14px !important' }} />}
-                          label={classroom.classCode}
-                          size="small"
-                          sx={{
-                            bgcolor: '#f8fafc',
-                            color: '#475569',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            border: '1px solid #e2e8f0',
-                            height: 28,
-                          }}
-                        />
-                      </Box>
-                      <Box sx={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: '50%',
-                        bgcolor: '#eff6ff',
-                        color: '#1565c0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        transition: 'all 0.2s',
-                        '&:hover': {
-                          bgcolor: '#1565c0',
-                          color: 'white',
-                        }
-                      }}>
-                        <ArrowForward sx={{ fontSize: 16 }} />
-                      </Box>
+                      <School sx={{ fontSize: 24 }} />
                     </Box>
-                  </Paper>
-                </Grid>
+                    <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                      <Typography
+                        variant="h6"
+                        fontWeight={800}
+                        sx={{
+                          color: 'text.primary',
+                          lineHeight: 1.25,
+                          letterSpacing: '-0.01em',
+                          fontSize: '1.05rem',
+                        }}
+                      >
+                        {classroom.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, fontSize: '0.78rem', display: 'block', mt: 0.5 }}>
+                        {classroom.subject} &bull; {classroom.section}
+                      </Typography>
+                      {classroom.description && (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'text.secondary',
+                            fontSize: '0.82rem',
+                            lineHeight: 1.5,
+                            mt: 1,
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                          }}
+                        >
+                          {classroom.description}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+
+                  {/* Right side: Chips + Action Arrow */}
+                  <Box sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    flexShrink: 0,
+                    minWidth: { md: '220px' },
+                    width: { xs: '100%', md: 'auto' },
+                    justifyContent: { xs: 'space-between', md: 'flex-end' },
+                    borderTop: { xs: '1px solid #f1f5f9', md: 'none' },
+                    pt: { xs: 1.5, md: 0 },
+                    mt: { xs: 1, md: 0 }
+                  }}>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Chip
+                        icon={<People sx={{ fontSize: '14px !important' }} />}
+                        label={`${classroom.students.length} student${classroom.students.length !== 1 ? 's' : ''}`}
+                        size="small"
+                        sx={{
+                          bgcolor: '#f8fafc',
+                          color: '#475569',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          border: '1px solid #e2e8f0',
+                          height: 28,
+                        }}
+                      />
+                      <Chip
+                        icon={<Code sx={{ fontSize: '14px !important' }} />}
+                        label={classroom.classCode}
+                        size="small"
+                        sx={{
+                          bgcolor: '#f8fafc',
+                          color: '#475569',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          border: '1px solid #e2e8f0',
+                          height: 28,
+                        }}
+                      />
+                    </Box>
+                    <Box sx={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      bgcolor: '#eff6ff',
+                      color: '#1565c0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        bgcolor: '#1565c0',
+                        color: 'white',
+                      }
+                    }}>
+                      <ArrowForward sx={{ fontSize: 16 }} />
+                    </Box>
+                  </Box>
+                </Paper>
               );
             })}
-          </Grid>
+          </Box>
         )}
       </Container>
 
