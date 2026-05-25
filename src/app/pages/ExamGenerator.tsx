@@ -485,8 +485,8 @@ export default function ExamGenerator() {
             </Alert>
 
             <Grid container spacing={3}>
-              <Grid item xs={12} md={4}>
-                <Card variant="outlined" sx={{ height: '100%' }}>
+              <Grid item xs={12} md={4} sx={{ display: 'flex' }}>
+                <Card variant="outlined" sx={{ width: '100%', height: '100%' }}>
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Typography variant="h6" gutterBottom fontWeight="bold">
                       Syllabus
@@ -521,8 +521,8 @@ export default function ExamGenerator() {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} md={4}>
-                <Card variant="outlined" sx={{ height: '100%' }}>
+              <Grid item xs={12} md={4} sx={{ display: 'flex' }}>
+                <Card variant="outlined" sx={{ width: '100%', height: '100%' }}>
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Typography variant="h6" gutterBottom fontWeight="bold">
                       Table of Specifications
@@ -557,8 +557,8 @@ export default function ExamGenerator() {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} md={4}>
-                <Card variant="outlined" sx={{ height: '100%' }}>
+              <Grid item xs={12} md={4} sx={{ display: 'flex' }}>
+                <Card variant="outlined" sx={{ width: '100%', height: '100%' }}>
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Typography variant="h6" gutterBottom fontWeight="bold">
                       Learning Materials

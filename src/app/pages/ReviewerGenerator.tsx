@@ -310,28 +310,54 @@ export default function ReviewerGenerator() {
               </Typography>
               <Grid container spacing={1.5}>
                 {availableMaterials.map((mat) => (
-                  <Grid item xs={12} sm={6} key={mat.id}>
-                    <Card
+                  <Grid item xs={12} key={mat.id}>
+                    <Paper
                       onClick={() => setSelectedMaterialId(mat.id === selectedMaterialId ? '' : mat.id)}
+                      elevation={0}
                       sx={{
-                        cursor: 'pointer', borderRadius: 3,
-                        border: mat.id === selectedMaterialId ? '2px solid #a855f7' : '1.5px solid #e2e8f0',
+                        width: '100%',
+                        cursor: 'pointer',
+                        borderRadius: 3,
+                        border: mat.id === selectedMaterialId ? '1px solid #a855f7' : '1px solid #e2e8f0',
+                        borderLeft: `6px solid ${mat.id === selectedMaterialId ? '#a855f7' : '#94a3b8'}`,
                         bgcolor: mat.id === selectedMaterialId ? '#faf5ff' : 'white',
                         transition: 'all 0.2s ease',
-                        '&:hover': { borderColor: '#a855f7', boxShadow: '0 4px 12px rgba(168,85,247,0.12)' },
+                        '&:hover': {
+                          borderColor: '#a855f7',
+                          boxShadow: '0 8px 20px rgba(168,85,247,0.06)'
+                        },
+                        p: 2.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 2,
+                        boxSizing: 'border-box'
                       }}
                     >
-                      <CardContent sx={{ p: '10px 14px !important', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Article sx={{ color: mat.id === selectedMaterialId ? '#a855f7' : '#94a3b8', flexShrink: 0 }} />
+                      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', minWidth: 0, flexGrow: 1 }}>
+                        <Box sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 2,
+                          bgcolor: mat.id === selectedMaterialId ? '#ede9fe' : '#f1f5f9',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <Article sx={{ color: mat.id === selectedMaterialId ? '#a855f7' : '#94a3b8', fontSize: 22 }} />
+                        </Box>
                         <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                          <Typography variant="body2" fontWeight="bold" noWrap>{mat.name}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {new Date(mat.uploadedAt).toLocaleDateString()}
+                          <Typography variant="subtitle2" fontWeight={800} sx={{ color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {mat.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mt: 0.5, display: 'block' }}>
+                            Uploaded: {new Date(mat.uploadedAt).toLocaleDateString()}
                           </Typography>
                         </Box>
-                        {mat.id === selectedMaterialId && <CheckCircle sx={{ color: '#a855f7', fontSize: 20, flexShrink: 0 }} />}
-                      </CardContent>
-                    </Card>
+                      </Box>
+                      {mat.id === selectedMaterialId && <CheckCircle sx={{ color: '#a855f7', fontSize: 24, flexShrink: 0 }} />}
+                    </Paper>
                   </Grid>
                 ))}
               </Grid>

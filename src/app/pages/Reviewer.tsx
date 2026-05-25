@@ -227,7 +227,7 @@ export default function Reviewer() {
             </Button>
           </Paper>
         ) : (
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             {filteredReviewers.map((rev) => {
               const mods = rev.modules || [];
               const passed = mods.filter((m: any) => m.status === 'passed').length;
@@ -237,72 +237,153 @@ export default function Reviewer() {
               const dc = diffColor[rev.difficulty] || diffColor.normal;
 
               return (
-                <Grid item xs={12} md={6} key={rev.id}>
-                  <Card sx={{
-                    height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 3,
-                    border: isCompleted ? '1.5px solid #86efac' : '1px solid rgba(0,0,0,0.08)',
-                    boxShadow: isCompleted ? '0 4px 20px rgba(22,163,74,0.1)' : '0 4px 16px rgba(0,0,0,0.05)',
-                    transition: 'all 0.25s ease',
-                    '&:hover': { boxShadow: '0 8px 28px rgba(0,0,0,0.10)', transform: 'translateY(-3px)' },
-                  }}>
-                    <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-                        <Box sx={{ flexGrow: 1, pr: 1, minWidth: 0 }}>
-                          <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3 }}>{rev.title}</Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            {rev.subject}
+                <Grid item xs={12} key={rev.id}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      width: '100%',
+                      bgcolor: 'white',
+                      borderRadius: 3,
+                      border: isCompleted ? '1px solid #86efac' : '1px solid #e2e8f0',
+                      borderLeft: `6px solid ${dc.color}`,
+                      p: 3,
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                        borderColor: isCompleted ? '#86efac' : '#cbd5e1',
+                      },
+                      display: 'flex',
+                      flexDirection: { xs: 'column', md: 'row' },
+                      alignItems: { xs: 'flex-start', md: 'center' },
+                      justifyContent: 'space-between',
+                      gap: 3,
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    {/* Left Section: Icon + Title & Subject */}
+                    <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start', flexGrow: 1, minWidth: 0 }}>
+                      <Box sx={{
+                        width: 46,
+                        height: 46,
+                        borderRadius: 2,
+                        background: isCompleted ? 'linear-gradient(135deg, #16a34a, #22c55e)' : 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        color: 'white',
+                        boxShadow: '0 4px 12px rgba(3,105,161,0.2)',
+                      }}>
+                        <MenuBook sx={{ fontSize: 24 }} />
+                      </Box>
+                      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                        <Typography
+                          variant="h6"
+                          fontWeight={800}
+                          sx={{
+                            color: 'text.primary',
+                            lineHeight: 1.25,
+                            letterSpacing: '-0.01em',
+                            fontSize: '1.05rem',
+                          }}
+                        >
+                          {rev.title}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, fontSize: '0.78rem', display: 'block', mt: 0.5 }}>
+                          Subject: {rev.subject}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
+                          {rev.source && (
+                            <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                              Source: {rev.source}
+                            </Typography>
+                          )}
+                          <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                            Created: {new Date(rev.createdAt).toLocaleDateString()}
                           </Typography>
                         </Box>
+                      </Box>
+                    </Box>
+
+                    {/* Middle Section: Progress Bar */}
+                    <Box sx={{ flexGrow: 1, width: { xs: '100%', md: '220px' }, flexShrink: 0 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700}>Progress</Typography>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700}>{passed}/{total} modules passed</Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate" value={pct}
+                        sx={{
+                          height: 8,
+                          borderRadius: 4,
+                          bgcolor: '#f1f5f9',
+                          border: '1px solid #e2e8f0',
+                          '& .MuiLinearProgress-bar': {
+                            background: isCompleted ? 'linear-gradient(90deg, #16a34a, #22c55e)' : 'linear-gradient(90deg, #0369a1, #0ea5e9)'
+                          }
+                        }}
+                      />
+                    </Box>
+
+                    {/* Right Section: Chips + Action Buttons */}
+                    <Box sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      flexShrink: 0,
+                      width: { xs: '100%', md: 'auto' },
+                      justifyContent: { xs: 'space-between', md: 'flex-end' },
+                      borderTop: { xs: '1px solid #f1f5f9', md: 'none' },
+                      pt: { xs: 1.5, md: 0 },
+                      mt: { xs: 1, md: 0 }
+                    }}>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Chip
+                          size="small" label={rev.difficulty?.toUpperCase() || 'NORMAL'}
+                          sx={{ bgcolor: dc.bg, color: dc.color, border: `1px solid ${dc.border}`, fontWeight: 700, fontSize: '0.68rem', height: 26 }}
+                        />
+                        <Chip size="small" label={`${total} Modules`} variant="outlined" sx={{ height: 26, fontSize: '0.68rem', fontWeight: 600 }} />
+                        {isCompleted && <Chip size="small" label="Completed" icon={<CheckCircle sx={{ fontSize: '14px !important' }} />} color="success" sx={{ height: 26, fontSize: '0.68rem', fontWeight: 700 }} />}
+                      </Box>
+
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Button
+                          variant={isCompleted ? 'outlined' : 'contained'}
+                          size="small"
+                          startIcon={isCompleted ? <EmojiEvents /> : <PlayArrow />}
+                          onClick={() => openReviewer(rev)}
+                          sx={{
+                            fontWeight: 700,
+                            height: 32,
+                            minWidth: 120,
+                            ...(isCompleted
+                              ? { color: '#16a34a', borderColor: '#16a34a' }
+                              : { background: 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%)' }
+                            )
+                          }}
+                        >
+                          {isCompleted ? 'Review Again' : passed > 0 ? 'Continue' : 'Start'}
+                        </Button>
                         <Tooltip title="Delete reviewer">
-                          <IconButton size="small" color="error" onClick={() => setDeleteConfirmId(rev.id)} sx={{ flexShrink: 0, mt: -0.5 }}>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => setDeleteConfirmId(rev.id)}
+                            sx={{
+                              bgcolor: '#fef2f2',
+                              border: '1px solid #fee2e2',
+                              '&:hover': { bgcolor: '#fee2e2' },
+                              width: 32,
+                              height: 32,
+                            }}
+                          >
                             <Delete fontSize="small" />
                           </IconButton>
                         </Tooltip>
                       </Box>
-
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-                        <Chip
-                          size="small" label={rev.difficulty?.toUpperCase() || 'NORMAL'}
-                          sx={{ bgcolor: dc.bg, color: dc.color, border: `1px solid ${dc.border}`, fontWeight: 700, fontSize: '0.7rem' }}
-                        />
-                        <Chip size="small" label={`${total} Modules`} variant="outlined" />
-                        <Chip size="small" label={`${rev.itemsPerModule} items/module`} variant="outlined" />
-                        {isCompleted && <Chip size="small" label="Completed" icon={<CheckCircle />} color="success" />}
-                      </Box>
-
-                      {/* Progress bar */}
-                      <Box sx={{ mb: 1.5 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                          <Typography variant="caption" color="text.secondary" fontWeight={600}>Progress</Typography>
-                          <Typography variant="caption" color="text.secondary">{passed}/{total} modules passed</Typography>
-                        </Box>
-                        <LinearProgress
-                          variant="determinate" value={pct}
-                          sx={{ height: 7, borderRadius: 4, bgcolor: '#e2e8f0',
-                            '& .MuiLinearProgress-bar': { background: isCompleted ? 'linear-gradient(90deg, #16a34a, #22c55e)' : 'linear-gradient(90deg, #0369a1, #0ea5e9)' } }}
-                        />
-                      </Box>
-
-                      {rev.source && (
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          Source: {rev.source}
-                        </Typography>
-                      )}
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        Created {new Date(rev.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                      </Typography>
-                    </CardContent>
-                    <CardActions sx={{ p: 2, pt: 0 }}>
-                      <Button
-                        variant={isCompleted ? 'outlined' : 'contained'} fullWidth
-                        startIcon={isCompleted ? <EmojiEvents /> : <PlayArrow />}
-                        onClick={() => openReviewer(rev)}
-                        sx={!isCompleted ? { background: 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%)', fontWeight: 'bold' } : { fontWeight: 'bold', color: '#16a34a', borderColor: '#16a34a' }}
-                      >
-                        {isCompleted ? 'Review Again' : passed > 0 ? 'Continue' : 'Start'}
-                      </Button>
-                    </CardActions>
-                  </Card>
+                    </Box>
+                  </Paper>
                 </Grid>
               );
             })}

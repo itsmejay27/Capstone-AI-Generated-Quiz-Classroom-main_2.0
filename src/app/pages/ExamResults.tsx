@@ -101,8 +101,8 @@ export default function ExamResults() {
       </Paper>
 
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
-          <Card variant="outlined" sx={{ borderRadius: 2 }}>
+        <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
+          <Card variant="outlined" sx={{ width: '100%', height: '100%', borderRadius: 2 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Assignment sx={{ mr: 1, color: '#1976d2' }} />
@@ -121,8 +121,8 @@ export default function ExamResults() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Card variant="outlined" sx={{ borderRadius: 2 }}>
+        <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
+          <Card variant="outlined" sx={{ width: '100%', height: '100%', borderRadius: 2 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Timer sx={{ mr: 1, color: '#1976d2' }} />

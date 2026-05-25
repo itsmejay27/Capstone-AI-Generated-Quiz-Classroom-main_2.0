@@ -315,94 +315,150 @@ export default function ClassroomDetail() {
               const sc = status ? statusColor[status] : null;
 
               return (
-                <Grid item xs={12} md={6} key={exam.id}>
-                  <Card
+                <Grid item xs={12} key={exam.id}>
+                  <Paper
+                    elevation={0}
                     sx={{
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
+                      width: '100%',
+                      bgcolor: 'white',
                       borderRadius: 3,
-                      border: '1px solid rgba(0,0,0,0.08)',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.05)',
-                      transition: 'all 0.25s ease',
-                      '&:hover': { boxShadow: '0 8px 28px rgba(0,0,0,0.10)', transform: 'translateY(-3px)' },
+                      border: '1px solid #e2e8f0',
+                      borderLeft: `6px solid ${sc ? sc.border : '#1e3a8a'}`,
+                      p: 3,
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                        borderColor: '#cbd5e1',
+                      },
+                      display: 'flex',
+                      flexDirection: { xs: 'column', md: 'row' },
+                      alignItems: { xs: 'flex-start', md: 'center' },
+                      justifyContent: 'space-between',
+                      gap: 2.5,
+                      boxSizing: 'border-box',
                     }}
                   >
-                    <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2, gap: 2 }}>
-                        <Box sx={{
-                          width: 48, height: 48, borderRadius: 2.5,
-                          background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        }}>
-                          <Quiz sx={{ fontSize: 26, color: 'white' }} />
-                        </Box>
-                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                          <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3, mb: 0.5 }}>
+                    {/* Left Section: Icon + Text Content */}
+                    <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start', flexGrow: 1, minWidth: 0 }}>
+                      <Box sx={{
+                        width: 46,
+                        height: 46,
+                        borderRadius: 2,
+                        background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        color: 'white',
+                        boxShadow: '0 4px 12px rgba(30,58,138,0.2)',
+                      }}>
+                        <Quiz sx={{ fontSize: 24 }} />
+                      </Box>
+                      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 0.5 }}>
+                          <Typography
+                            variant="h6"
+                            fontWeight={800}
+                            sx={{
+                              color: 'text.primary',
+                              lineHeight: 1.25,
+                              letterSpacing: '-0.01em',
+                              fontSize: '1.05rem',
+                            }}
+                          >
                             {exam.title}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{
-                            display: '-webkit-box', WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                          }}>
+                          {sc && (
+                            <Chip
+                              size="small"
+                              label={sc.label}
+                              sx={{
+                                bgcolor: sc.bg,
+                                color: sc.text,
+                                border: `1px solid ${sc.border}`,
+                                fontWeight: 700,
+                                fontSize: '0.68rem',
+                                height: 20
+                              }}
+                            />
+                          )}
+                        </Box>
+                        {exam.description && (
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: 'text.secondary',
+                              fontSize: '0.82rem',
+                              lineHeight: 1.5,
+                              mb: 1.5,
+                              overflow: 'hidden',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                            }}
+                          >
                             {exam.description}
                           </Typography>
+                        )}
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                          {exam.postDate && (
+                            <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                              Posted: {new Date(exam.postDate).toLocaleString()}
+                            </Typography>
+                          )}
+                          {exam.dueDate && (
+                            <Typography variant="caption" color="error.main" fontWeight="700">
+                              Due: {new Date(exam.dueDate).toLocaleString()}
+                            </Typography>
+                          )}
                         </Box>
-                        {sc && (
-                          <Chip
-                            size="small"
-                            label={sc.label}
-                            sx={{ bgcolor: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, fontWeight: 600, flexShrink: 0 }}
-                          />
+
+                        {!isInstructor && status === 'completed' && attempt?.score !== undefined && (
+                          <Box sx={{ mt: 1.5, p: 1, px: 1.5, bgcolor: '#dcfce7', borderRadius: 2, border: '1px solid #86efac', display: 'inline-block' }}>
+                            <Typography variant="caption" fontWeight="bold" color="success.dark" sx={{ fontSize: '0.75rem' }}>
+                              Score: {attempt.score} / {exam.totalPoints}
+                            </Typography>
+                          </Box>
                         )}
                       </Box>
+                    </Box>
 
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-                        <Chip icon={<Schedule />} label={`${exam.duration} mins`} size="small" variant="outlined" />
-                        <Chip label={`${exam.totalPoints} pts`} size="small" variant="outlined" />
-                        <Chip label={`${exam.activeQuestionCount || exam.questions.length} items`} size="small" variant="outlined" />
+                    {/* Right Section: Details Chips & Action Button */}
+                    <Box sx={{
+                      display: 'flex',
+                      flexDirection: { xs: 'row', md: 'column' },
+                      alignItems: { xs: 'center', md: 'flex-end' },
+                      gap: 2,
+                      flexShrink: 0,
+                      minWidth: { md: '190px' },
+                      width: { xs: '100%', md: 'auto' },
+                      justifyContent: { xs: 'space-between', md: 'flex-end' },
+                      borderTop: { xs: '1px solid #f1f5f9', md: 'none' },
+                      pt: { xs: 1.5, md: 0 },
+                      mt: { xs: 1, md: 0 }
+                    }}>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: { md: 1 } }}>
+                        <Chip icon={<Schedule sx={{ fontSize: '13px !important' }} />} label={`${exam.duration} mins`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
+                        <Chip label={`${exam.totalPoints} pts`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
+                        <Chip label={`${exam.activeQuestionCount || exam.questions.length} items`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
                       </Box>
 
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                        {exam.postDate && (
-                          <Typography variant="caption" color="text.secondary">
-                            Posted: {new Date(exam.postDate).toLocaleString()}
-                          </Typography>
-                        )}
-                        {exam.dueDate && (
-                          <Typography variant="caption" color="error.main" fontWeight="bold">
-                            Due: {new Date(exam.dueDate).toLocaleString()}
-                          </Typography>
-                        )}
-                      </Box>
-
-                      {!isInstructor && status === 'completed' && attempt?.score !== undefined && (
-                        <Box sx={{ mt: 2, p: 1.5, bgcolor: '#dcfce7', borderRadius: 2, border: '1px solid #86efac' }}>
-                          <Typography variant="body2" fontWeight="bold" color="success.dark">
-                            Score: {attempt.score} / {exam.totalPoints}
-                          </Typography>
-                        </Box>
-                      )}
-                    </CardContent>
-
-                    <CardActions sx={{ p: 2, pt: 0 }}>
                       {isInstructor ? (
-                        <Button size="small" variant="outlined" fullWidth onClick={() => navigate('/exam-repository')}>
+                        <Button size="small" variant="outlined" onClick={() => navigate('/exam-repository')} sx={{ minWidth: 150, fontWeight: 700 }}>
                           Manage in Repository
                         </Button>
                       ) : status === 'completed' ? (
-                        <Button size="small" variant="outlined" color="success" fullWidth
-                          onClick={() => navigate(`/exam/${exam.id}/results`)}>
+                        <Button size="small" variant="outlined" color="success" onClick={() => navigate(`/exam/${exam.id}/results`)} sx={{ minWidth: 150, fontWeight: 700 }}>
                           View Submission
                         </Button>
                       ) : (
-                        <Button size="small" variant="contained" fullWidth disabled={!!isFuture}
-                          onClick={() => navigate(`/exam/${exam.id}/take`)}>
+                        <Button size="small" variant="contained" disabled={!!isFuture} onClick={() => navigate(`/exam/${exam.id}/take`)} sx={{ minWidth: 150, fontWeight: 700 }}>
                           {status === 'in-progress' ? 'Continue Exam' : 'Start Exam'}
                         </Button>
                       )}
-                    </CardActions>
-                  </Card>
+                    </Box>
+                  </Paper>
                 </Grid>
               );
             })
@@ -469,59 +525,129 @@ export default function ClassroomDetail() {
               </Typography>
             </Paper>
           ) : (
-            <Grid container spacing={3}>
+            <Grid container spacing={2}>
               {materials.map((mat) => (
-                <Grid item xs={12} sm={6} md={4} key={mat.id}>
-                  <Card
+                <Grid item xs={12} key={mat.id}>
+                  <Paper
+                    elevation={0}
                     sx={{
-                      height: '100%', display: 'flex', flexDirection: 'column',
-                      borderRadius: 3, border: '1px solid rgba(0,0,0,0.08)',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.05)',
-                      transition: 'all 0.25s ease',
-                      '&:hover': { boxShadow: '0 8px 24px rgba(0,0,0,0.1)', transform: 'translateY(-3px)' },
+                      width: '100%',
+                      bgcolor: 'white',
+                      borderRadius: 3,
+                      border: '1px solid #e2e8f0',
+                      borderLeft: '6px solid #0288d1',
+                      p: 2.5,
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                        borderColor: '#cbd5e1',
+                      },
+                      display: 'flex',
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      alignItems: { xs: 'flex-start', sm: 'center' },
+                      justifyContent: 'space-between',
+                      gap: 2,
+                      boxSizing: 'border-box',
                     }}
                   >
-                    <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1.5 }}>
+                    {/* Left Section: File Icon + File Info */}
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexGrow: 1, minWidth: 0 }}>
+                      <Box sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 2,
+                        bgcolor: '#f0f9ff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        border: '1px solid #bae6fd'
+                      }}>
                         {getMaterialIcon(mat.name)}
-                        <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                          <Typography variant="subtitle2" fontWeight="bold" sx={{
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>
-                            {mat.name}
+                      </Box>
+                      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                        <Typography
+                          variant="subtitle2"
+                          fontWeight={800}
+                          sx={{
+                            color: 'text.primary',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontSize: '0.92rem',
+                            lineHeight: 1.3
+                          }}
+                        >
+                          {mat.name}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.5, alignItems: 'center' }}>
+                          <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                            Size: {formatFileSize(mat.size)}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {formatFileSize(mat.size)}
+                            &bull;
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Uploaded by {mat.uploadedBy}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            &bull;
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(mat.uploadedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                           </Typography>
                         </Box>
                       </Box>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        Uploaded by {mat.uploadedBy}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {new Date(mat.uploadedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                      </Typography>
-                    </CardContent>
-                    <CardActions sx={{ p: 1.5, pt: 0, gap: 1 }}>
+                    </Box>
+
+                    {/* Right Section: View / Delete Action */}
+                    <Box sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      flexShrink: 0,
+                      minWidth: { sm: '160px' },
+                      width: { xs: '100%', sm: 'auto' },
+                      justifyContent: { xs: 'space-between', sm: 'flex-end' },
+                      borderTop: { xs: '1px solid #f1f5f9', sm: 'none' },
+                      pt: { xs: 1.5, sm: 0 },
+                      mt: { xs: 1, sm: 0 }
+                    }}>
                       <Button
-                        size="small" variant="contained" startIcon={<Visibility />}
-                        sx={{ flexGrow: 1, background: 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%)' }}
+                        size="small"
+                        variant="contained"
+                        startIcon={<Visibility />}
+                        sx={{
+                          fontWeight: 700,
+                          background: 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%)',
+                          px: 2.5,
+                          height: 32,
+                        }}
                         onClick={() => setViewMaterial(mat)}
                       >
-                        View
+                        View Notes
                       </Button>
                       {isInstructor && (
                         <Tooltip title="Delete material">
                           <IconButton
-                            size="small" color="error"
+                            size="small"
+                            color="error"
                             onClick={() => setDeleteConfirm(mat.id)}
+                            sx={{
+                              bgcolor: '#fef2f2',
+                              border: '1px solid #fee2e2',
+                              '&:hover': { bgcolor: '#fee2e2' },
+                              width: 32,
+                              height: 32,
+                            }}
                           >
                             <Delete fontSize="small" />
                           </IconButton>
                         </Tooltip>
                       )}
-                    </CardActions>
-                  </Card>
+                    </Box>
+                  </Paper>
                 </Grid>
               ))}
             </Grid>
@@ -531,69 +657,64 @@ export default function ClassroomDetail() {
 
       {/* TAB 2: PEOPLE LIST */}
       {activeTab === 2 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ borderRadius: 4, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
-              <Box sx={{ p: 2.5, background: 'linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%)', color: 'white' }}>
-                <Typography variant="subtitle1" fontWeight="bold">Class Instructor</Typography>
-              </Box>
-              <Box sx={{ p: 2 }}>
-                {instructor && (
-                  <ListItem sx={{ px: 1 }}>
+        <Paper sx={{ p: 3.5, borderRadius: 4, boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+          <Typography variant="h6" fontWeight="bold" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <People color="primary" /> Class Members
+          </Typography>
+
+          <Typography variant="subtitle1" fontWeight="bold" sx={{ color: 'text.secondary', mb: 1 }}>
+            Class Instructor
+          </Typography>
+          <List disablePadding sx={{ mb: 4 }}>
+            {instructor && (
+              <ListItem sx={{ px: 1 }}>
+                <ListItemAvatar>
+                  <Avatar sx={{ background: 'linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%)', fontWeight: 'bold' }}>
+                    {instructor.name.charAt(0)}
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={<Typography fontWeight="bold">{instructor.name}</Typography>}
+                  secondary={instructor.email}
+                />
+                <Chip label="Instructor" size="small" color="secondary" sx={{ ml: 'auto' }} />
+              </ListItem>
+            )}
+          </List>
+
+          <Divider sx={{ my: 3 }} />
+
+          <Typography variant="subtitle1" fontWeight="bold" sx={{ color: 'text.secondary', mb: 1 }}>
+            Class Students ({students.length})
+          </Typography>
+          {students.length === 0 ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                No students enrolled yet. Share code <strong>{classroom.classCode}</strong> with students.
+              </Typography>
+            </Box>
+          ) : (
+            <List disablePadding>
+              {students.map((student, idx) => (
+                <Box key={student.id}>
+                  <ListItem sx={{ px: 1, py: 1.5 }}>
                     <ListItemAvatar>
-                      <Avatar sx={{ background: 'linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%)', fontWeight: 'bold' }}>
-                        {instructor.name.charAt(0)}
+                      <Avatar sx={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', fontWeight: 'bold' }}>
+                        {student.name.charAt(0)}
                       </Avatar>
                     </ListItemAvatar>
                     <ListItemText
-                      primary={<Typography fontWeight="bold">{instructor.name}</Typography>}
-                      secondary={instructor.email}
+                      primary={<Typography fontWeight="medium">{student.name}</Typography>}
+                      secondary={student.email}
                     />
+                    <Chip label={`#${idx + 1}`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569', ml: 'auto' }} />
                   </ListItem>
-                )}
-              </Box>
-            </Paper>
-          </Grid>
-
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ borderRadius: 4, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
-              <Box sx={{ p: 2.5, background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', color: 'white' }}>
-                <Typography variant="subtitle1" fontWeight="bold">
-                  Class Students ({students.length})
-                </Typography>
-              </Box>
-              <Box sx={{ p: 2 }}>
-                {students.length === 0 ? (
-                  <Box sx={{ p: 3, textAlign: 'center' }}>
-                    <Typography variant="body2" color="text.secondary">
-                      No students enrolled yet. Share code <strong>{classroom.classCode}</strong> with students.
-                    </Typography>
-                  </Box>
-                ) : (
-                  <List disablePadding>
-                    {students.map((student, idx) => (
-                      <Box key={student.id}>
-                        <ListItem sx={{ px: 1 }}>
-                          <ListItemAvatar>
-                            <Avatar sx={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', fontWeight: 'bold' }}>
-                              {student.name.charAt(0)}
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={<Typography fontWeight="medium">{student.name}</Typography>}
-                            secondary={student.email}
-                          />
-                          <Chip label={`#${idx + 1}`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569' }} />
-                        </ListItem>
-                        {idx < students.length - 1 && <Divider variant="inset" component="li" />}
-                      </Box>
-                    ))}
-                  </List>
-                )}
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
+                  {idx < students.length - 1 && <Divider variant="inset" component="li" />}
+                </Box>
+              ))}
+            </List>
+          )}
+        </Paper>
       )}
 
       {/* TAB 3: GRADES MATRIX (INSTRUCTOR ONLY) */}

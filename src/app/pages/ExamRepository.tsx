@@ -9,9 +9,6 @@ import {
   TextField,
   Button,
   Grid,
-  Card,
-  CardContent,
-  CardActions,
   Chip,
   Dialog,
   DialogTitle,
@@ -26,6 +23,7 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
+  Tooltip,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -269,32 +267,121 @@ export default function ExamRepository() {
             </Grid>
           ) : (
             filteredExams.map((exam) => (
-              <Grid item xs={12} md={6} key={exam.id}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', border: '1px solid #e0e0e0' }}>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" fontWeight="bold" gutterBottom>
-                      {exam.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                      {exam.description || 'No description provided.'}
-                    </Typography>
-
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-                      <Chip label={`Pool: ${exam.questions.length} items`} size="small" color="secondary" />
-                      <Chip label={`Set: ${exam.activeQuestionCount || exam.questions.length} items`} size="small" color="primary" />
-                      <Chip label={`Points Cap: ${exam.totalPoints} pts`} size="small" variant="outlined" />
-                      <Chip label={`Time limit: ${exam.duration}m`} size="small" variant="outlined" />
+              <Grid item xs={12} key={exam.id}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    width: '100%',
+                    bgcolor: 'white',
+                    borderRadius: 3,
+                    border: '1px solid #e2e8f0',
+                    borderLeft: '6px solid #9c27b0',
+                    p: 3,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                      borderColor: '#cbd5e1',
+                    },
+                    display: 'flex',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    alignItems: { xs: 'flex-start', md: 'center' },
+                    justifyContent: 'space-between',
+                    gap: 3,
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {/* Left Section: Icon + Title & Description */}
+                  <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start', flexGrow: 1, minWidth: 0 }}>
+                    <Box sx={{
+                      width: 46,
+                      height: 46,
+                      borderRadius: 2,
+                      background: 'linear-gradient(135deg, #7b1fa2 0%, #9c27b0 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      color: 'white',
+                      boxShadow: '0 4px 12px rgba(156,39,176,0.2)',
+                    }}>
+                      <Quiz sx={{ fontSize: 24 }} />
                     </Box>
-                  </CardContent>
-                  <CardActions sx={{ justifyContent: 'space-between', p: 2, bgcolor: '#fbfbfb', borderTop: '1px solid #e8e8e8' }}>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
-                        size="small"
-                        startIcon={<Edit />}
-                        onClick={() => handleOpenEdit(exam)}
+                    <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                      <Typography
+                        variant="h6"
+                        fontWeight={800}
+                        sx={{
+                          color: 'text.primary',
+                          lineHeight: 1.25,
+                          letterSpacing: '-0.01em',
+                          fontSize: '1.05rem',
+                          mb: 0.5
+                        }}
                       >
-                        Edit
-                      </Button>
+                        {exam.title}
+                      </Typography>
+                      {exam.description && (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'text.secondary',
+                            fontSize: '0.82rem',
+                            lineHeight: 1.5,
+                            mb: 1.5,
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                          }}
+                        >
+                          {exam.description}
+                        </Typography>
+                      )}
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Chip label={`Pool: ${exam.questions.length} items`} size="small" color="secondary" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 700 }} />
+                        <Chip label={`Set: ${exam.activeQuestionCount || exam.questions.length} items`} size="small" color="primary" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 700 }} />
+                        <Chip label={`Points Cap: ${exam.totalPoints} pts`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
+                        <Chip label={`Time limit: ${exam.duration}m`} size="small" variant="outlined" sx={{ height: 24, fontSize: '0.7rem', fontWeight: 600 }} />
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {/* Right Section: Edit, Delete, Assign Actions */}
+                  <Box sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    flexShrink: 0,
+                    minWidth: { md: '280px' },
+                    width: { xs: '100%', md: 'auto' },
+                    justifyContent: { xs: 'space-between', md: 'flex-end' },
+                    borderTop: { xs: '1px solid #f1f5f9', md: 'none' },
+                    pt: { xs: 1.5, md: 0 },
+                    mt: { xs: 1, md: 0 }
+                  }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<Edit />}
+                      onClick={() => handleOpenEdit(exam)}
+                      sx={{ fontWeight: 700, height: 32 }}
+                    >
+                      Edit Template
+                    </Button>
+                    
+                    <Button
+                      variant="contained"
+                      size="small"
+                      color="secondary"
+                      startIcon={<CalendarMonth />}
+                      onClick={() => handleOpenAssign(exam.id)}
+                      sx={{ fontWeight: 700, height: 32, px: 2 }}
+                    >
+                      Assign to Class
+                    </Button>
+
+                    <Tooltip title="Delete template">
                       <IconButton
                         size="small"
                         color="error"
@@ -303,21 +390,19 @@ export default function ExamRepository() {
                             deleteExamFromRepository(exam.id);
                           }
                         }}
+                        sx={{
+                          bgcolor: '#fef2f2',
+                          border: '1px solid #fee2e2',
+                          '&:hover': { bgcolor: '#fee2e2' },
+                          width: 32,
+                          height: 32,
+                        }}
                       >
                         <Delete />
                       </IconButton>
-                    </Box>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      color="secondary"
-                      startIcon={<CalendarMonth />}
-                      onClick={() => handleOpenAssign(exam.id)}
-                    >
-                      Assign to Class
-                    </Button>
-                  </CardActions>
-                </Card>
+                    </Tooltip>
+                  </Box>
+                </Paper>
               </Grid>
             ))
           )}
