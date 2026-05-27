@@ -137,7 +137,7 @@ function generateModules(subject: string, difficulty: 'easy' | 'normal' | 'hard'
       topic,
       lessonContent: generateLesson(subject, topic, idx + 1, config.moduleCount),
       questions,
-      status: idx === 0 ? 'unlocked' : 'locked',
+      status: 'unlocked',
       bestScore: null,
       attempts: 0,
     };

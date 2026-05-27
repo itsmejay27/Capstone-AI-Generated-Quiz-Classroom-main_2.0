@@ -203,17 +203,20 @@ export default function ExamResults() {
 
           {questionsToReview.map((question: any, index: number) => {
             const studentAnswer = attempt.answers[question.id];
+            const isAnswered = studentAnswer !== undefined && studentAnswer !== null && String(studentAnswer).trim() !== '';
             
             // Determine correctness
             let isCorrect = false;
-            if (question.type === 'multiple-choice') {
-              isCorrect = studentAnswer === question.correctAnswer;
-            } else if (question.type === 'true-false') {
-              isCorrect = String(studentAnswer).toLowerCase() === String(question.correctAnswer).toLowerCase();
-            } else if (question.type === 'short-answer') {
-              isCorrect = String(studentAnswer).trim().toLowerCase() === String(question.correctAnswer).trim().toLowerCase();
-            } else {
-              isCorrect = true; // Essays default positive
+            if (isAnswered) {
+              if (question.type === 'multiple-choice') {
+                isCorrect = studentAnswer === question.correctAnswer;
+              } else if (question.type === 'true-false') {
+                isCorrect = String(studentAnswer).toLowerCase() === String(question.correctAnswer).toLowerCase();
+              } else if (question.type === 'short-answer') {
+                isCorrect = String(studentAnswer).trim().toLowerCase() === String(question.correctAnswer).trim().toLowerCase();
+              } else {
+                isCorrect = true; // Essays default positive if answered
+              }
             }
 
             const pointsEarned = isCorrect ? question.points : 0;

@@ -24,6 +24,7 @@ import {
   RadioGroup,
   FormControlLabel,
   Tooltip,
+  CircularProgress,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -34,6 +35,7 @@ import {
   Quiz,
   Image as ImageIcon,
   Save,
+  AutoAwesome,
 } from '@mui/icons-material';
 
 const MOCK_IMAGES = [
@@ -42,6 +44,114 @@ const MOCK_IMAGES = [
   'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=400&q=80',
   'https://images.unsplash.com/photo-1507668077129-56e32842fceb?w=400&q=80',
 ];
+
+// Database of smart context-aware question alternatives for premium regeneration feedback
+const ALTERNATIVE_QUESTIONS: Record<string, any[]> = {
+  'multiple-choice': [
+    {
+      question: 'Which of the following describes the difference between block elements and inline elements in CSS?',
+      options: [
+        'Block elements start on a new line and take up full width; inline elements do not.',
+        'Inline elements can contain block elements, but block elements cannot.',
+        'Block elements ignore padding-top and padding-bottom properties completely.',
+        'Inline elements are styled using flex container alignment properties only.'
+      ],
+      correctAnswer: 0,
+      points: 2,
+    },
+    {
+      question: 'What is the primary purpose of the React `useEffect` clean-up function?',
+      options: [
+        'To prevent memory leaks by unsubscribing from event listeners and clearing active timers.',
+        'To force the component to re-render immediately with updated state values.',
+        'To erase local storage context cache before rendering child nodes.',
+        'To validate structural interfaces during static compilation evaluation.'
+      ],
+      correctAnswer: 0,
+      points: 2,
+    },
+    {
+      question: 'Which HTTP status code represents a successful resource creation on a REST server?',
+      options: [
+        '201 Created',
+        '200 OK',
+        '204 No Content',
+        '302 Found'
+      ],
+      correctAnswer: 0,
+      points: 2,
+    },
+    {
+      question: 'In SQL databases, which statement is used to remove a table structure entirely including its schemas?',
+      options: [
+        'DROP TABLE table_name;',
+        'DELETE TABLE table_name;',
+        'TRUNCATE TABLE table_name;',
+        'REMOVE TABLE table_name;'
+      ],
+      correctAnswer: 0,
+      points: 2,
+    }
+  ],
+  'true-false': [
+    {
+      question: 'True or False: In JavaScript, standard array structures can hold multiple data types concurrently.',
+      correctAnswer: 'true',
+      points: 1,
+    },
+    {
+      question: 'True or False: The CSS grid container flex-basis determines the default aspect-ratio of images.',
+      correctAnswer: 'false',
+      points: 1,
+    },
+    {
+      question: 'True or False: A standard React component will re-render anytime its parent component re-renders.',
+      correctAnswer: 'true',
+      points: 1,
+    },
+    {
+      question: 'True or False: TypeScript types are compiled and strictly validated at client-side browser runtime.',
+      correctAnswer: 'false',
+      points: 1,
+    }
+  ],
+  'short-answer': [
+    {
+      question: 'What command in Git is used to record project changes in the repository history log?',
+      correctAnswer: 'git commit',
+      points: 3,
+    },
+    {
+      question: 'What is the standard name of the API method used to fetch data over networks in modern browsers?',
+      correctAnswer: 'fetch',
+      points: 3,
+    },
+    {
+      question: 'What React hook is used to access the context values stored inside a ContextProvider?',
+      correctAnswer: 'useContext',
+      points: 3,
+    },
+    {
+      question: 'What markup syntax standard is used by React components to render nested templates?',
+      correctAnswer: 'JSX',
+      points: 3,
+    }
+  ],
+  'essay': [
+    {
+      question: 'Discuss the concept of asynchronous execution in JavaScript. Contrast the benefits of using async/await syntax over traditional callbacks or raw promises.',
+      points: 5,
+    },
+    {
+      question: 'Elaborate on the structural benefits of using semantic HTML elements over non-semantic divs and spans for modern SEO and web accessibility guidelines.',
+      points: 5,
+    },
+    {
+      question: 'Analyze the trade-offs between Client-Side Rendering (CSR) and Server-Side Rendering (SSR) in modern web applications. Highlight their impacts on page-load performance.',
+      points: 5,
+    }
+  ]
+};
 
 export default function ExamRepository() {
   const {
@@ -74,6 +184,7 @@ export default function ExamRepository() {
   const [openEditModal, setOpenEditModal] = useState(false);
   const [editingExam, setEditingExam] = useState<any | null>(null);
   const [newQType, setNewQType] = useState('multiple-choice');
+  const [regeneratingMap, setRegeneratingMap] = useState<Record<string, boolean>>({});
 
   const filteredExams = savedExams.filter((exam) =>
     exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -103,7 +214,6 @@ export default function ExamRepository() {
 
   // Open full template editor
   const handleOpenEdit = (exam: any) => {
-    // deep clone
     setEditingExam(JSON.parse(JSON.stringify(exam)));
     setOpenEditModal(true);
   };
@@ -205,6 +315,130 @@ export default function ExamRepository() {
     const updated = { ...editingExam };
     updated.questions.push(newQ);
     setEditingExam(updated);
+  };
+
+  // Smart AI Regeneration in Repository modal
+  const handleRegenerateEditQ = (qIdx: number, mode: 'full' | 'options' | 'answer') => {
+    if (!editingExam) return;
+    const q = editingExam.questions[qIdx];
+    setRegeneratingMap((prev) => ({ ...prev, [q.id]: true }));
+
+    setTimeout(() => {
+      setEditingExam((prevExam: any) => {
+        if (!prevExam) return null;
+        const updatedQuestions = [...prevExam.questions];
+        const currentQ = updatedQuestions[qIdx];
+        const type = currentQ.type;
+
+        if (mode === 'full') {
+          const list = ALTERNATIVE_QUESTIONS[type] || [];
+          let chosen = list[Math.floor(Math.random() * list.length)];
+          if (chosen.question === currentQ.question && list.length > 1) {
+            const filtered = list.filter(item => item.question !== currentQ.question);
+            chosen = filtered[Math.floor(Math.random() * filtered.length)];
+          }
+          updatedQuestions[qIdx] = {
+            ...currentQ,
+            question: chosen.question,
+            options: chosen.options ? [...chosen.options] : undefined,
+            correctAnswer: chosen.correctAnswer,
+            points: chosen.points || currentQ.points,
+          };
+        } else if (mode === 'options') {
+          if (type === 'multiple-choice' && currentQ.options) {
+            const originalOptions = [...currentQ.options];
+            const correctText = originalOptions[currentQ.correctAnswer];
+            
+            for (let i = originalOptions.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [originalOptions[i], originalOptions[j]] = [originalOptions[j], originalOptions[i]];
+            }
+            
+            const newCorrectIdx = originalOptions.indexOf(correctText);
+            updatedQuestions[qIdx] = {
+              ...currentQ,
+              options: originalOptions,
+              correctAnswer: newCorrectIdx >= 0 ? newCorrectIdx : 0,
+            };
+          } else if (type === 'true-false') {
+            const nextAnswer = currentQ.correctAnswer === 'true' ? 'false' : 'true';
+            let newText = currentQ.question;
+            if (nextAnswer === 'false') {
+              if (!newText.includes(' NOT ') && !newText.includes(' not ')) {
+                newText = newText.replace('runs in', 'does NOT run in')
+                                .replace('supports', 'does NOT support')
+                                .replace('is a', 'is NOT a');
+              }
+            } else {
+              newText = newText.replace('does NOT run in', 'runs in')
+                              .replace('does NOT support', 'supports')
+                              .replace('is NOT a', 'is a');
+            }
+            updatedQuestions[qIdx] = {
+              ...currentQ,
+              question: newText,
+              correctAnswer: nextAnswer,
+            };
+          }
+        } else if (mode === 'answer') {
+          if (type === 'multiple-choice' && currentQ.options) {
+            const newIndex = (currentQ.correctAnswer + 1) % currentQ.options.length;
+            updatedQuestions[qIdx] = {
+              ...currentQ,
+              correctAnswer: newIndex,
+            };
+          } else if (type === 'true-false') {
+            const nextAnswer = currentQ.correctAnswer === 'true' ? 'false' : 'true';
+            let newText = currentQ.question;
+            if (nextAnswer === 'false') {
+              newText = newText.replace('runs in', 'does NOT run in')
+                              .replace('supports', 'does NOT support')
+                              .replace('is a', 'is NOT a');
+            } else {
+              newText = newText.replace('does NOT run in', 'runs in')
+                              .replace('does NOT support', 'supports')
+                              .replace('is NOT a', 'is a');
+            }
+            updatedQuestions[qIdx] = {
+              ...currentQ,
+              question: newText,
+              correctAnswer: nextAnswer,
+            };
+          } else if (type === 'short-answer') {
+            const alternatives: Record<string, string> = {
+              'let': 'const',
+              'const': 'let',
+              'fetch': 'axios',
+              'axios': 'fetch',
+              'git commit': 'git push',
+              'git push': 'git commit',
+              'JSX': 'TSX',
+              'TSX': 'JSX',
+              'Document Object Model': 'DOM',
+              'flex-direction': 'justify-content',
+              'flexbox': 'grid'
+            };
+            const currentAns = currentQ.correctAnswer;
+            const nextAns = alternatives[currentAns] || 'API Endpoint';
+            let newText = currentQ.question;
+            if (nextAns === 'const') {
+              newText = newText.replace('reassigned', 'reassigned (immutable reference)');
+            }
+            updatedQuestions[qIdx] = {
+              ...currentQ,
+              question: newText,
+              correctAnswer: nextAns,
+            };
+          }
+        }
+
+        return {
+          ...prevExam,
+          questions: updatedQuestions,
+        };
+      });
+      setRegeneratingMap((prev) => ({ ...prev, [q.id]: false }));
+    }, 1500);
   };
 
   const myClassrooms = classrooms.filter((c) => c.instructorId === currentUser?.id);
@@ -454,9 +688,9 @@ export default function ExamRepository() {
         </DialogActions>
       </Dialog>
 
-      {/* Full Template Editor Modal */}
-      <Dialog open={openEditModal} onClose={() => setOpenEditModal(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Edit Exam Template Pool</DialogTitle>
+      {/* Full Template Editor Modal Upgraded with Vertical Layouts and Smart AI Regeneration */}
+      <Dialog open={openEditModal} onClose={() => setOpenEditModal(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+        <DialogTitle sx={{ fontWeight: 900 }}>Edit Exam Template Pool</DialogTitle>
         <DialogContent dividers>
           {editingExam && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -465,6 +699,7 @@ export default function ExamRepository() {
                 label="Template Title"
                 value={editingExam.title}
                 onChange={(e) => setEditingExam({ ...editingExam, title: e.target.value })}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
               <TextField
                 fullWidth
@@ -473,6 +708,7 @@ export default function ExamRepository() {
                 onChange={(e) => setEditingExam({ ...editingExam, description: e.target.value })}
                 multiline
                 rows={2}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
@@ -486,6 +722,7 @@ export default function ExamRepository() {
                       value={newQType}
                       label="Type to Add"
                       onChange={(e) => setNewQType(e.target.value as string)}
+                      sx={{ borderRadius: 2 }}
                     >
                       <MenuItem value="multiple-choice">Multiple Choice</MenuItem>
                       <MenuItem value="true-false">True / False</MenuItem>
@@ -493,151 +730,291 @@ export default function ExamRepository() {
                       <MenuItem value="essay">Essay</MenuItem>
                     </Select>
                   </FormControl>
-                  <Button startIcon={<Add />} variant="outlined" size="small" onClick={() => handleAddQ(newQType)}>
+                  <Button startIcon={<Add />} variant="outlined" size="small" onClick={() => handleAddQ(newQType)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}>
                     Add Question Item
                   </Button>
                 </Box>
               </Box>
 
-              <Grid container spacing={2}>
-                {editingExam.questions.map((q: any, qIdx: number) => (
-                  <Grid item xs={12} key={q.id}>
-                    <Paper variant="outlined" sx={{ p: 2, bgcolor: '#fafafa', position: 'relative' }}>
-                      <Box sx={{ position: 'absolute', top: 10, right: 10 }}>
-                        <IconButton size="small" color="error" onClick={() => handleDeleteQ(qIdx)}>
-                          <Delete />
-                        </IconButton>
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                        <Chip label={`#${qIdx + 1}`} size="small" />
-                        <Chip label={q.type.toUpperCase()} size="small" color="primary" />
-                        <Chip label={`${q.points || 0} points`} size="small" variant="outlined" />
-                      </Box>
-
-                      <TextField
-                        fullWidth
-                        label="Question Text"
-                        value={q.question}
-                        onChange={(e) => handleUpdateQText(qIdx, e.target.value)}
-                        sx={{ mb: 2 }}
-                        size="small"
-                      />
-
-                      {/* Question image attachment */}
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<ImageIcon />}
-                          onClick={() => handleAttachImg(qIdx)}
-                        >
-                          Attach Question Image
-                        </Button>
-                        {q.image && (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <img src={q.image} alt="Q Thumbnail" style={{ width: '35px', height: '35px', objectFit: 'cover', borderRadius: '4px' }} />
-                            <IconButton size="small" color="error" onClick={() => handleRemoveImg(qIdx)}>
-                              <Delete fontSize="small" />
-                            </IconButton>
+              {/* Stacked Vertical Question Cards list */}
+              <Grid container spacing={3.5}>
+                {editingExam.questions.map((q: any, qIdx: number) => {
+                  const isQRegenerating = !!regeneratingMap[q.id];
+                  return (
+                    <Grid item xs={12} key={q.id}>
+                      <Paper
+                        variant="outlined"
+                        sx={{
+                          p: { xs: 2.5, md: 4 },
+                          bgcolor: '#ffffff',
+                          position: 'relative',
+                          borderRadius: 4,
+                          borderColor: '#cbd5e1',
+                          borderLeft: '5px solid #7b1fa2',
+                          boxShadow: '0 2px 10px rgba(0,0,0,0.01)',
+                          transition: 'all 0.2s',
+                          '&:hover': { boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }
+                        }}
+                      >
+                        {/* Loading Frosted Overlay during Regeneration */}
+                        {isQRegenerating && (
+                          <Box sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            bgcolor: 'rgba(255, 255, 255, 0.85)',
+                            backdropFilter: 'blur(3px)',
+                            zIndex: 10,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 4
+                          }}>
+                            <CircularProgress size={38} thickness={4} sx={{ color: '#7b1fa2', mb: 1.5 }} />
+                            <Typography variant="subtitle2" fontWeight="bold" color="#7b1fa2">
+                              AI is constructing alternative templates...
+                            </Typography>
                           </Box>
                         )}
-                      </Box>
 
-                      {/* MC choices */}
-                      {q.type === 'multiple-choice' && q.options && (
-                        <Box sx={{ pl: 2, borderLeft: '3px solid #1976d2' }}>
-                          <RadioGroup
-                            value={q.correctAnswer}
-                            onChange={(e) => handleUpdateQCorrectAnswer(qIdx, Number(e.target.value))}
-                          >
-                            {q.options.map((opt: string, optIdx: number) => (
-                              <Grid container spacing={1} key={optIdx} alignItems="center" sx={{ mb: 1 }}>
-                                <Grid item xs={1}>
-                                  <FormControlLabel value={optIdx} control={<Radio />} label={String.fromCharCode(65 + optIdx)} />
-                                </Grid>
-                                <Grid item xs={8}>
-                                  <TextField
-                                    fullWidth
-                                    size="small"
-                                    value={opt}
-                                    onChange={(e) => handleUpdateQOption(qIdx, optIdx, e.target.value)}
-                                  />
-                                </Grid>
-                                <Grid item xs={3} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <IconButton size="small" onClick={() => handleAttachImg(qIdx, optIdx)}>
-                                    <ImageIcon fontSize="small" />
-                                  </IconButton>
-                                  {q.optionsImages?.[optIdx] && (
-                                    <>
-                                      <img src={q.optionsImages[optIdx]} alt="Opt Thumbnail" style={{ width: '25px', height: '25px', objectFit: 'cover', borderRadius: '4px' }} />
-                                      <IconButton size="small" color="error" onClick={() => handleRemoveImg(qIdx, optIdx)}>
-                                        <Delete fontSize="small" />
-                                      </IconButton>
-                                    </>
-                                  )}
-                                </Grid>
-                              </Grid>
-                            ))}
-                          </RadioGroup>
+                        <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
+                          <IconButton size="small" color="error" onClick={() => handleDeleteQ(qIdx)}>
+                            <Delete />
+                          </IconButton>
                         </Box>
-                      )}
-
-                      {/* T/F Choice */}
-                      {q.type === 'true-false' && (
-                        <Box sx={{ pl: 2, borderLeft: '3px solid #2e7d32' }}>
-                          <RadioGroup
-                            value={q.correctAnswer}
-                            onChange={(e) => handleUpdateQCorrectAnswer(qIdx, e.target.value)}
-                            row
-                          >
-                            <FormControlLabel value="true" control={<Radio />} label="True" />
-                            <FormControlLabel value="false" control={<Radio />} label="False" />
-                          </RadioGroup>
+                        
+                        <Box sx={{ display: 'flex', gap: 1, mb: 2.5, alignItems: 'center' }}>
+                          <Chip label={`#${qIdx + 1}`} size="small" sx={{ fontWeight: 800 }} />
+                          <Chip label={q.type.toUpperCase()} size="small" color="primary" sx={{ fontWeight: 800 }} />
+                          <Chip label={`${q.points || 0} points`} size="small" variant="outlined" sx={{ fontWeight: 700 }} />
                         </Box>
-                      )}
 
-                      {/* Short answer choice */}
-                      {q.type === 'short-answer' && (
-                        <TextField
-                          fullWidth
-                          label="Expected Correct Answer"
-                          size="small"
-                          value={q.correctAnswer}
-                          onChange={(e) => handleUpdateQCorrectAnswer(qIdx, e.target.value)}
-                        />
-                      )}
-
-                      {/* Essay choice */}
-                      {q.type === 'essay' && (
-                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', pl: 1 }}>
-                          Essay Question: Students will compose their answer in a multi-line input box. No automated grading key is required.
-                        </Typography>
-                      )}
-
-                      {/* Points setting for question */}
-                      <Grid container spacing={2} sx={{ mt: 2 }}>
-                        <Grid item xs={6} md={3}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          
+                          {/* Question Text (Full Width) */}
                           <TextField
                             fullWidth
-                            label="Points"
-                            type="number"
+                            label="Question Text"
+                            value={q.question}
+                            onChange={(e) => handleUpdateQText(qIdx, e.target.value)}
                             size="small"
-                            value={q.points || 0}
-                            onChange={(e) => handleUpdateQPoints(qIdx, Number(e.target.value))}
+                            multiline
+                            rows={2}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                           />
-                        </Grid>
-                      </Grid>
-                    </Paper>
-                  </Grid>
-                ))}
+
+                          {/* Question image attachment (Vertical Stack) */}
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<ImageIcon />}
+                              onClick={() => handleAttachImg(qIdx)}
+                              sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.75rem' }}
+                            >
+                              Attach Question Image
+                            </Button>
+                            {q.image && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 0.5, border: '1px solid #e2e8f0', borderRadius: 2 }}>
+                                <img src={q.image} alt="Q Thumbnail" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                                <IconButton size="small" color="error" onClick={() => handleRemoveImg(qIdx)}>
+                                  <Delete fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            )}
+                          </Box>
+
+                          {/* MC choices (Strictly Vertical option stacking) */}
+                          {q.type === 'multiple-choice' && q.options && (
+                            <Box sx={{ pl: { xs: 1.5, md: 3 }, borderLeft: '4px solid #7b1fa2', display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#475569' }}>
+                                Options and Answer Key Setup
+                              </Typography>
+                              <RadioGroup
+                                value={q.correctAnswer}
+                                onChange={(e) => handleUpdateQCorrectAnswer(qIdx, Number(e.target.value))}
+                              >
+                                {q.options.map((opt: string, optIdx: number) => {
+                                  const isCorrectOpt = q.correctAnswer === optIdx;
+                                  return (
+                                    <Box key={optIdx} sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1 }}>
+                                      
+                                      {/* Option Header Radio */}
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Radio value={optIdx} checked={isCorrectOpt} size="small" />
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: isCorrectOpt ? 'success.main' : 'text.secondary' }}>
+                                          Option {String.fromCharCode(65 + optIdx)} {isCorrectOpt && '(Correct Answer Key)'}
+                                        </Typography>
+                                      </Box>
+
+                                      {/* TextField Full Width */}
+                                      <TextField
+                                        fullWidth
+                                        size="small"
+                                        value={opt}
+                                        onChange={(e) => handleUpdateQOption(qIdx, optIdx, e.target.value)}
+                                        placeholder={`Statement for Option ${String.fromCharCode(65 + optIdx)}`}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                      />
+
+                                      {/* Option image vertically under input */}
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 1 }}>
+                                        <IconButton size="small" onClick={() => handleAttachImg(qIdx, optIdx)} title="Attach option image">
+                                          <ImageIcon fontSize="small" />
+                                        </IconButton>
+                                        {q.optionsImages?.[optIdx] && (
+                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, p: 0.5, border: '1px solid #f1f5f9', borderRadius: 1.5 }}>
+                                            <img src={q.optionsImages[optIdx]} alt="Opt Thumbnail" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '4px' }} />
+                                            <IconButton size="small" color="error" onClick={() => handleRemoveImg(qIdx, optIdx)}>
+                                              <Delete fontSize="small" />
+                                            </IconButton>
+                                          </Box>
+                                        )}
+                                      </Box>
+                                    </Box>
+                                  );
+                                })}
+                              </RadioGroup>
+                            </Box>
+                          )}
+
+                          {/* T/F Choice (Spaced vertically) */}
+                          {q.type === 'true-false' && (
+                            <Box sx={{ pl: 3, borderLeft: '4px solid #10b981', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#475569' }}>
+                                Select Correct Key
+                              </Typography>
+                              <RadioGroup
+                                value={q.correctAnswer}
+                                onChange={(e) => handleUpdateQCorrectAnswer(qIdx, e.target.value)}
+                                sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+                              >
+                                <FormControlLabel value="true" control={<Radio />} label="True" />
+                                <FormControlLabel value="false" control={<Radio />} label="False" />
+                              </RadioGroup>
+                            </Box>
+                          )}
+
+                          {/* Short answer choice */}
+                          {q.type === 'short-answer' && (
+                            <Box sx={{ pl: 3, borderLeft: '4px solid #f59e0b' }}>
+                              <TextField
+                                fullWidth
+                                label="Expected Correct Answer"
+                                size="small"
+                                value={q.correctAnswer}
+                                onChange={(e) => handleUpdateQCorrectAnswer(qIdx, e.target.value)}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                              />
+                            </Box>
+                          )}
+
+                          {/* Essay choice */}
+                          {q.type === 'essay' && (
+                            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', pl: 1 }}>
+                              Essay Question: Students compose their answer dynamically. No key is graded automatically.
+                            </Typography>
+                          )}
+
+                          {/* Points setting and difficulty row (Vertical Stack) */}
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2, bgcolor: '#f8fafc', borderRadius: 3, border: '1px solid #f1f5f9' }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Metadata Weights</Typography>
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} md={6}>
+                                <TextField
+                                  fullWidth
+                                  label="Points weight"
+                                  type="number"
+                                  size="small"
+                                  value={q.points || 0}
+                                  onChange={(e) => handleUpdateQPoints(qIdx, Number(e.target.value))}
+                                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} md={6}>
+                                <FormControl fullWidth size="small">
+                                  <InputLabel>Difficulty Tier</InputLabel>
+                                  <Select
+                                    value={q.difficulty || 'medium'}
+                                    label="Difficulty Tier"
+                                    onChange={(e) => {
+                                      if (!editingExam) return;
+                                      const updated = { ...editingExam };
+                                      updated.questions[qIdx].difficulty = e.target.value;
+                                      setEditingExam(updated);
+                                    }}
+                                    sx={{ borderRadius: 2 }}
+                                  >
+                                    <MenuItem value="easy">Easy</MenuItem>
+                                    <MenuItem value="medium">Medium</MenuItem>
+                                    <MenuItem value="hard">Hard</MenuItem>
+                                  </Select>
+                                </FormControl>
+                              </Grid>
+                            </Grid>
+                          </Box>
+
+                          {/* Smart AI Regeneration Box in Repository */}
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: 2, border: '1px solid #e9d5ff', bgcolor: 'rgba(123, 31, 162, 0.01)', borderRadius: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <AutoAwesome color="secondary" sx={{ fontSize: 16 }} />
+                              <Typography variant="caption" sx={{ fontWeight: 800, color: '#7b1fa2' }}>
+                                SMART AI REGENERATION TOOLS
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                              <Button
+                                variant="outlined"
+                                color="secondary"
+                                size="small"
+                                startIcon={<AutoAwesome />}
+                                onClick={() => handleRegenerateEditQ(qIdx, 'full')}
+                                sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700 }}
+                              >
+                                Regenerate Full Question
+                              </Button>
+                              {q.type === 'multiple-choice' && (
+                                <Button
+                                  variant="outlined"
+                                  color="secondary"
+                                  size="small"
+                                  startIcon={<AutoAwesome />}
+                                  onClick={() => handleRegenerateEditQ(qIdx, 'options')}
+                                  sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700 }}
+                                >
+                                  Regenerate Options Only
+                                </Button>
+                              )}
+                              {q.type !== 'essay' && (
+                                <Button
+                                  variant="outlined"
+                                  color="warning"
+                                  size="small"
+                                  startIcon={<AutoAwesome />}
+                                  onClick={() => handleRegenerateEditQ(qIdx, 'answer')}
+                                  sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700 }}
+                                >
+                                  Regenerate Answer Key
+                                </Button>
+                              )}
+                            </Box>
+                          </Box>
+
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  );
+                })}
               </Grid>
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 2.5 }}>
           <Button onClick={() => setOpenEditModal(false)}>Cancel</Button>
-          <Button onClick={handleSaveEditConfirm} variant="contained" startIcon={<Save />}>
+          <Button onClick={handleSaveEditConfirm} variant="contained" color="secondary" startIcon={<Save />} sx={{ borderRadius: 2.5, px: 3 }}>
             Save Template Changes
           </Button>
         </DialogActions>

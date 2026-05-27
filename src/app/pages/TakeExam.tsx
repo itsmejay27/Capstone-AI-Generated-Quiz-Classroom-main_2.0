@@ -20,8 +20,9 @@ import {
   DialogActions,
   Chip,
   Divider,
+  Card,
 } from '@mui/material';
-import { Timer, Warning, CheckCircle, Image as ImageIcon } from '@mui/icons-material';
+import { Timer, Warning, CheckCircle, Image as ImageIcon, AutoAwesome, HelpOutline } from '@mui/icons-material';
 
 // Shuffler utility
 function shuffleArray<T>(array: T[]): T[] {
@@ -40,10 +41,8 @@ export default function TakeExam() {
 
   const exam = exams.find((e) => e.id === examId);
   
-  // Find or initialize attempt state
   const [attempt, setAttempt] = useState<any | null>(null);
   const [answers, setAnswers] = useState<Record<string, any>>({});
-  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [openSubmitDialog, setOpenSubmitDialog] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -54,7 +53,6 @@ export default function TakeExam() {
   useEffect(() => {
     if (!exam || !currentUser) return;
 
-    // Look for existing active attempt
     const existing = examAttempts.find(
       (a) => a.examId === exam.id && a.studentId === currentUser.id
     );
@@ -64,7 +62,6 @@ export default function TakeExam() {
       setAnswers(existing.answers || {});
       setHasStarted(true);
       
-      // Calculate remaining time
       const start = new Date(existing.startedAt).getTime();
       const elapsed = Math.floor((Date.now() - start) / 1000);
       const totalSec = exam.duration * 60;
@@ -75,22 +72,17 @@ export default function TakeExam() {
         setSubmitted(true);
       }
     } else {
-      // Create a brand new randomized exam subset
       const N = exam.activeQuestionCount || exam.questions.length;
       const pool = exam.questions;
       
-      // Randomly select N questions from N+E pool
       const shuffledPool = shuffleArray(pool);
       const selectedQuestions = shuffledPool.slice(0, Math.min(N, pool.length));
 
-      // For each selected question, shuffle the options and adjust correctAnswer
       const finalizedQuestions = selectedQuestions.map((q: any) => {
         if (q.type === 'multiple-choice' && q.options) {
-          // Shuffle options, keeping track of where the correct one went
           const originalCorrectIdx = q.correctAnswer;
           const originalCorrectValue = q.options[originalCorrectIdx];
           
-          // Zip options, images, and track original index
           const zipped = q.options.map((opt: string, idx: number) => ({
             text: opt,
             img: q.optionsImages?.[idx] || '',
@@ -108,7 +100,6 @@ export default function TakeExam() {
             options: newOptions,
             optionsImages: newOptionsImages,
             correctAnswer: newCorrectIdx,
-            // Keep a track of original key for verification if needed
             originalCorrectText: originalCorrectValue,
           };
         }
@@ -156,7 +147,7 @@ export default function TakeExam() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeRemaining, submitted]);
+  }, [timeRemaining, hasStarted, submitted]);
 
   if (!exam || (!attempt && !preparedAttempt)) {
     return (
@@ -169,40 +160,50 @@ export default function TakeExam() {
   if (!hasStarted) {
     return (
       <Container maxWidth="md" sx={{ py: 8 }}>
-        <Paper sx={{ p: 6, borderRadius: 3, textAlign: 'center' }}>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
+        <Paper sx={{ p: 6, borderRadius: 4, textAlign: 'center', boxShadow: '0 8px 30px rgba(15,23,42,0.08)' }}>
+          <Typography variant="h4" fontWeight={900} gutterBottom sx={{ letterSpacing: '-0.02em', color: '#0f172a' }}>
             {exam.title}
           </Typography>
-          <Typography variant="body1" color="text.secondary" paragraph>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4, px: { md: 4 } }}>
             {exam.description || 'Please read the instructions carefully before starting the assessment.'}
           </Typography>
           
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 4, my: 4 }}>
-            <Box>
-              <Typography variant="h6" fontWeight="bold">{exam.duration} Mins</Typography>
-              <Typography variant="body2" color="text.secondary">Time Limit</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center', gap: { xs: 2, sm: 4 }, my: 4, flexWrap: 'wrap' }}>
+            <Box sx={{ px: 3, py: 1.5, bgcolor: '#f8fafc', borderRadius: 3 }}>
+              <Typography variant="h5" fontWeight="black" color="primary.main">{exam.duration} Mins</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>TIME LIMIT</Typography>
             </Box>
-            <Divider orientation="vertical" flexItem />
-            <Box>
-              <Typography variant="h6" fontWeight="bold">{exam.activeQuestionCount || exam.questions.length}</Typography>
-              <Typography variant="body2" color="text.secondary">Questions</Typography>
+            <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' } }} />
+            <Box sx={{ px: 3, py: 1.5, bgcolor: '#f8fafc', borderRadius: 3 }}>
+              <Typography variant="h5" fontWeight="black" color="primary.main">{exam.activeQuestionCount || exam.questions.length}</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>QUESTIONS</Typography>
             </Box>
-            <Divider orientation="vertical" flexItem />
-            <Box>
-              <Typography variant="h6" fontWeight="bold">{exam.passingScore || 0}%</Typography>
-              <Typography variant="body2" color="text.secondary">Passing Score</Typography>
+            <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' } }} />
+            <Box sx={{ px: 3, py: 1.5, bgcolor: '#f8fafc', borderRadius: 3 }}>
+              <Typography variant="h5" fontWeight="black" color="primary.main">{exam.totalPoints} pts</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>TOTAL WEIGHT</Typography>
             </Box>
           </Box>
 
-          <Alert severity="info" sx={{ mb: 4, textAlign: 'left' }}>
-            Once you start the assessment, the timer will begin. Do not refresh or leave the page.
+          <Alert severity="warning" sx={{ mb: 4, textAlign: 'left', borderRadius: 3 }}>
+            <strong>Important Notice:</strong> Once the assessment begins, the timer runs continuously. Do not exit, refresh, or navigate away from the exam workspace.
           </Alert>
 
           <Button 
             variant="contained" 
             size="large" 
             onClick={handleStartExam}
-            sx={{ px: 6, py: 1.5, fontSize: '1.1rem' }}
+            startIcon={<AutoAwesome />}
+            sx={{
+              px: 6,
+              py: 1.8,
+              fontSize: '1.05rem',
+              borderRadius: 3.5,
+              textTransform: 'none',
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+              boxShadow: '0 10px 25px -5px rgba(15,23,42,0.3)'
+            }}
           >
             Start Assessment
           </Button>
@@ -212,25 +213,13 @@ export default function TakeExam() {
   }
 
   const activeQuestions = attempt.questions || [];
-  const question = activeQuestions[currentQuestionIdx];
-  
-  if (!question) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography>No active questions found in your drawer.</Typography>
-      </Container>
-    );
-  }
-
-  const progress = ((currentQuestionIdx + 1) / activeQuestions.length) * 100;
   const minutes = Math.floor(timeRemaining / 60);
   const seconds = timeRemaining % 60;
 
-  const handleAnswerChange = (value: any) => {
-    const updatedAnswers = { ...answers, [question.id]: value };
+  const handleAnswerChange = (qId: string, value: any) => {
+    const updatedAnswers = { ...answers, [qId]: value };
     setAnswers(updatedAnswers);
 
-    // Save state back to local storage context
     const updatedAttempt = {
       ...attempt,
       answers: updatedAnswers,
@@ -238,26 +227,19 @@ export default function TakeExam() {
     submitExamAttempt(updatedAttempt);
   };
 
-  const handleNext = () => {
-    if (currentQuestionIdx < activeQuestions.length - 1) {
-      setCurrentQuestionIdx(currentQuestionIdx + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentQuestionIdx > 0) {
-      setCurrentQuestionIdx(currentQuestionIdx - 1);
-    }
-  };
-
   const handleSubmit = () => {
     setSubmitted(true);
     setOpenSubmitDialog(false);
 
-    // Auto-grader: Calculate score based on answers
     let score = 0;
     activeQuestions.forEach((q: any) => {
       const studentAnswer = answers[q.id];
+      const isAnswered = studentAnswer !== undefined && studentAnswer !== null && String(studentAnswer).trim() !== '';
+
+      if (!isAnswered) {
+        return; // Unanswered questions get 0 points
+      }
+
       if (q.type === 'multiple-choice') {
         if (studentAnswer === q.correctAnswer) {
           score += q.points;
@@ -274,7 +256,6 @@ export default function TakeExam() {
           score += q.points;
         }
       } else {
-        // Essay gets full marks by default in simulator or random grade (say 80% credit)
         score += Math.round(q.points * 0.8);
       }
     });
@@ -295,17 +276,18 @@ export default function TakeExam() {
 
   const answeredCount = Object.keys(answers).length;
   const unansweredCount = activeQuestions.length - answeredCount;
+  const progress = (answeredCount / activeQuestions.length) * 100;
 
   if (submitted) {
     return (
       <Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
-        <Paper sx={{ p: 6, borderRadius: 3 }}>
+        <Paper sx={{ p: 6, borderRadius: 4, boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
           <CheckCircle sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
-          <Typography variant="h4" gutterBottom fontWeight="bold">
-            Assessment Submitted Successfully!
+          <Typography variant="h4" gutterBottom fontWeight="black" sx={{ letterSpacing: '-0.02em' }}>
+            Assessment Logged Successfully!
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Your scores have been logged into the classroom gradebook. Redirecting to breakdown...
+            Your attempt has been submitted to the instructor's gradebook. Loading results...
           </Typography>
         </Paper>
       </Container>
@@ -313,222 +295,461 @@ export default function TakeExam() {
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Paper sx={{ p: 3, mb: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
-            <Typography variant="h5" fontWeight="bold">
-              {exam.title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Question {currentQuestionIdx + 1} of {activeQuestions.length}
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'right' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Timer color={timeRemaining < 300 ? 'error' : 'primary'} />
-              <Typography
-                variant="h6"
-                fontWeight="bold"
-                color={timeRemaining < 300 ? 'error' : 'primary'}
-              >
-                {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-              </Typography>
-            </Box>
-            <Typography variant="caption" color="text.secondary">
-              Time Remaining
-            </Typography>
-          </Box>
-        </Box>
-        <LinearProgress variant="determinate" value={progress} sx={{ mt: 2 }} />
-      </Paper>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+
+      {/* High-End Header Banner */}
+      <Box sx={{
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        borderRadius: 4,
+        p: { xs: 3, md: 4 },
+        mb: 4,
+        color: 'white',
+        boxShadow: '0 8px 30px rgba(15,23,42,0.15)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <Typography variant="overline" sx={{ opacity: 0.8, letterSpacing: '0.1em', fontWeight: 700 }}>ACTIVE ASSESSMENT</Typography>
+        <Typography variant="h4" fontWeight={900} sx={{ letterSpacing: '-0.02em', mb: 1, fontSize: { xs: '1.75rem', md: '2.25rem' } }}>
+          {exam.title}
+        </Typography>
+        {exam.type && (
+          <Chip
+            label={exam.type.toUpperCase()}
+            size="small"
+            sx={{ mb: 1.5, bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, fontSize: '0.7rem', border: '1px solid rgba(255,255,255,0.3)' }}
+          />
+        )}
+        <Typography variant="body2" sx={{ color: '#cbd5e1', opacity: 0.9 }}>
+          {exam.description || 'Answer all questions in the pool. Review your answers before submitting.'}
+        </Typography>
+      </Box>
 
       {timeRemaining < 300 && (
-        <Alert severity="warning" icon={<Warning />} sx={{ mb: 2 }}>
-          Less than 5 minutes remaining!
+        <Alert severity="error" icon={<Warning />} sx={{ mb: 3, borderRadius: 3, fontWeight: 700 }}>
+          Warning: Less than 5 minutes remaining! Your attempt will auto-submit when the timer expires.
         </Alert>
       )}
 
-      <Paper sx={{ p: 4, mb: 2, borderRadius: 3 }}>
-        <Box sx={{ mb: 3 }}>
-          <Chip label={`Question ${currentQuestionIdx + 1}`} color="primary" sx={{ mb: 2 }} />
-          <Typography variant="h6" gutterBottom>
-            {question.question}
-          </Typography>
-          
-          {/* Main Question Image */}
-          {question.image && (
-            <Box sx={{ my: 2 }}>
-              <img
-                src={question.image}
-                alt="Question diagram"
-                style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '8px' }}
-              />
-            </Box>
-          )}
+      {/* Two-column flex layout: Questions (left) + Sticky Sidebar (right) */}
+      <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
 
-          <Typography variant="body2" color="text.secondary">
-            Value: {question.points} {question.points === 1 ? 'point' : 'points'}
-          </Typography>
+        {/* LEFT: All Questions Stacked Vertically */}
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {activeQuestions.map((q: any, idx: number) => {
+            const isAnswered = answers[q.id] !== undefined && String(answers[q.id]).trim() !== '';
+            return (
+              <Card
+                id={q.id}
+                key={q.id}
+                variant="outlined"
+                sx={{
+                  borderRadius: 4,
+                  borderColor: isAnswered ? '#6366f1' : '#e2e8f0',
+                  borderLeft: `6px solid ${isAnswered ? '#6366f1' : '#cbd5e1'}`,
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.01)',
+                  transition: 'all 0.2s',
+                  '&:hover': { boxShadow: '0 6px 20px rgba(0,0,0,0.04)' }
+                }}
+              >
+                <Box sx={{ p: { xs: 2.5, md: 4 } }}>
+
+                  {/* Header chips */}
+                  <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 2.5, flexWrap: 'wrap' }}>
+                    <Chip label={`QUESTION ${idx + 1}`} color={isAnswered ? 'primary' : 'default'} size="small" sx={{ fontWeight: 800, fontSize: '0.65rem' }} />
+                    <Chip label={q.type.toUpperCase()} size="small" variant="outlined" sx={{ fontWeight: 700, fontSize: '0.65rem' }} />
+                    <Chip label={`${q.points} pts`} size="small" variant="outlined" sx={{ fontWeight: 700, fontSize: '0.65rem' }} />
+                    {isAnswered && (
+                      <Chip label="ANSWERED" size="small" color="success" variant="outlined" sx={{ fontWeight: 700, fontSize: '0.65rem' }} />
+                    )}
+                  </Box>
+
+                  {/* Question Statement */}
+                  <Typography variant="h6" fontWeight="bold" sx={{ color: '#1e293b', mb: 2, fontSize: '1.1rem', lineHeight: 1.6 }}>
+                    {q.question}
+                  </Typography>
+
+                  {/* Image Asset */}
+                  {q.image && (
+                    <Box sx={{ my: 2 }}>
+                      <img
+                        src={q.image}
+                        alt={`Question ${idx + 1} Diagram`}
+                        style={{ maxWidth: '100%', maxHeight: '220px', borderRadius: '8px', border: '1px solid #f1f5f9' }}
+                      />
+                    </Box>
+                  )}
+
+                  {/* Multiple Choice */}
+                  {q.type === 'multiple-choice' && q.options && (
+                    <FormControl component="fieldset" fullWidth sx={{ mt: 1.5 }}>
+                      <RadioGroup
+                        value={answers[q.id] ?? ''}
+                        onChange={(e) => handleAnswerChange(q.id, Number(e.target.value))}
+                      >
+                        {q.options.map((option: string, optIdx: number) => {
+                          const isSelected = answers[q.id] === optIdx;
+                          return (
+                            <FormControlLabel
+                              key={optIdx}
+                              value={optIdx}
+                              control={<Radio />}
+                              label={
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, py: 0.5 }}>
+                                  <Typography sx={{ fontWeight: isSelected ? 700 : 400, fontSize: '0.95rem' }}>
+                                    <strong>{String.fromCharCode(65 + optIdx)}.</strong> {option}
+                                  </Typography>
+                                  {q.optionsImages?.[optIdx] && (
+                                    <Box sx={{ mt: 0.5 }}>
+                                      <img
+                                        src={q.optionsImages[optIdx]}
+                                        alt={`Option ${String.fromCharCode(65 + optIdx)}`}
+                                        style={{ width: '45px', height: '45px', objectFit: 'cover', borderRadius: '4px' }}
+                                      />
+                                    </Box>
+                                  )}
+                                </Box>
+                              }
+                              sx={{
+                                border: isSelected ? '2px solid #6366f1' : '1px solid #e2e8f0',
+                                bgcolor: isSelected ? 'rgba(99,102,241,0.04)' : 'transparent',
+                                borderRadius: 3,
+                                mb: 1.5,
+                                mr: 0,
+                                p: 2,
+                                transition: 'all 0.15s ease',
+                                '&:hover': {
+                                  bgcolor: isSelected ? 'rgba(99,102,241,0.06)' : '#f8fafc',
+                                  borderColor: isSelected ? '#6366f1' : '#cbd5e1',
+                                },
+                              }}
+                            />
+                          );
+                        })}
+                      </RadioGroup>
+                    </FormControl>
+                  )}
+
+                  {/* True / False */}
+                  {q.type === 'true-false' && (
+                    <FormControl component="fieldset" fullWidth sx={{ mt: 1.5 }}>
+                      <RadioGroup
+                        value={answers[q.id] ?? ''}
+                        onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                      >
+                        {['true', 'false'].map((val) => {
+                          const isSelected = String(answers[q.id]) === val;
+                          return (
+                            <FormControlLabel
+                              key={val}
+                              value={val}
+                              control={<Radio />}
+                              label={val === 'true' ? 'True (Factual statement)' : 'False (Incorrect statement)'}
+                              sx={{
+                                border: isSelected ? '2px solid #6366f1' : '1px solid #e2e8f0',
+                                bgcolor: isSelected ? 'rgba(99,102,241,0.04)' : 'transparent',
+                                borderRadius: 3,
+                                mb: 1.5,
+                                mr: 0,
+                                p: 2,
+                                transition: 'all 0.15s ease',
+                                '&:hover': {
+                                  bgcolor: isSelected ? 'rgba(99,102,241,0.06)' : '#f8fafc',
+                                  borderColor: isSelected ? '#6366f1' : '#cbd5e1',
+                                },
+                              }}
+                            />
+                          );
+                        })}
+                      </RadioGroup>
+                    </FormControl>
+                  )}
+
+                  {/* Short Answer / Essay */}
+                  {(q.type === 'short-answer' || q.type === 'essay') && (
+                    <Box sx={{ mt: 1.5 }}>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={q.type === 'essay' ? 6 : 2}
+                        value={answers[q.id] ?? ''}
+                        onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                        placeholder="Type your response here..."
+                        variant="outlined"
+                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+                      />
+                    </Box>
+                  )}
+
+                </Box>
+              </Card>
+            );
+          })}
         </Box>
 
-        {/* Multiple choice selections */}
-        {question.type === 'multiple-choice' && question.options && (
-          <FormControl component="fieldset" fullWidth>
-            <RadioGroup
-              value={answers[question.id] ?? ''}
-              onChange={(e) => handleAnswerChange(Number(e.target.value))}
-            >
-              {question.options.map((option: string, index: number) => {
-                const isSelected = answers[question.id] === index;
-                return (
-                  <FormControlLabel
-                    key={index}
-                    value={index}
-                    control={<Radio />}
-                    label={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography sx={{ fontWeight: isSelected ? 600 : 400 }}>
-                          {String.fromCharCode(65 + index)}. {option}
-                        </Typography>
-                        {question.optionsImages?.[index] && (
-                          <img
-                            src={question.optionsImages[index]}
-                            alt={`Option ${index}`}
-                            style={{ width: '45px', height: '45px', objectFit: 'cover', borderRadius: '4px' }}
-                          />
-                        )}
-                      </Box>
-                    }
-                    sx={{
-                      border: isSelected ? '2px solid #1565c0' : '1px solid #e2e8f0',
-                      bgcolor: isSelected ? '#f0f7ff' : 'transparent',
-                      borderRadius: 2,
-                      mb: 1.5,
-                      mr: 0,
-                      p: 2,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        bgcolor: isSelected ? '#e0f0ff' : '#f8fafc',
-                        borderColor: isSelected ? '#1565c0' : '#cbd5e1',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
-                      },
-                    }}
-                  />
-                );
-              })}
-            </RadioGroup>
-          </FormControl>
-        )}
-
-        {/* True / False selections */}
-        {question.type === 'true-false' && (
-          <FormControl component="fieldset" fullWidth>
-            <RadioGroup
-              value={answers[question.id] ?? ''}
-              onChange={(e) => handleAnswerChange(e.target.value)}
-            >
-              {['true', 'false'].map((val) => {
-                const isSelected = String(answers[question.id]) === val;
-                return (
-                  <FormControlLabel
-                    key={val}
-                    value={val}
-                    control={<Radio />}
-                    label={val === 'true' ? 'True' : 'False'}
-                    sx={{
-                      border: isSelected ? '2px solid #1565c0' : '1px solid #e2e8f0',
-                      bgcolor: isSelected ? '#f0f7ff' : 'transparent',
-                      borderRadius: 2,
-                      mb: 1.5,
-                      mr: 0,
-                      p: 2,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        bgcolor: isSelected ? '#e0f0ff' : '#f8fafc',
-                        borderColor: isSelected ? '#1565c0' : '#cbd5e1',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
-                      },
-                    }}
-                  />
-                );
-              })}
-            </RadioGroup>
-          </FormControl>
-        )}
-
-        {/* Short Answer and Essay input */}
-        {(question.type === 'short-answer' || question.type === 'essay') && (
-          <TextField
-            fullWidth
-            multiline
-            rows={question.type === 'essay' ? 8 : 3}
-            value={answers[question.id] ?? ''}
-            onChange={(e) => handleAnswerChange(e.target.value)}
-            placeholder="Type your answer here..."
-            variant="outlined"
-          />
-        )}
-      </Paper>
-
-      {/* Button controls */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Button
-          variant="outlined"
-          onClick={handlePrevious}
-          disabled={currentQuestionIdx === 0}
+        {/* RIGHT: Sticky Timer + Question Grid Sidebar — always on the right */}
+        <Box
+          sx={{
+            width: { xs: '100%', md: 320 },
+            flexShrink: 0,
+            display: { xs: 'none', md: 'flex' },
+            flexDirection: 'column',
+            gap: 3,
+            position: 'sticky',
+            top: 24,
+            alignSelf: 'flex-start',
+          }}
         >
-          Previous
-        </Button>
+          {/* Timer & Progress Card */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              borderRadius: 4,
+              border: timeRemaining < 300 ? '2px solid #fca5a5' : '1px solid #e2e8f0',
+              boxShadow: timeRemaining < 300
+                ? '0 4px 20px rgba(239,68,68,0.12)'
+                : '0 4px 20px rgba(0,0,0,0.05)',
+              transition: 'all 0.3s',
+            }}
+          >
+            {/* Timer Display */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                py: 2,
+                mb: 2,
+                borderRadius: 3,
+                bgcolor: timeRemaining < 300 ? 'rgba(239,68,68,0.05)' : 'rgba(99,102,241,0.04)',
+                border: timeRemaining < 300 ? '1px solid #fecaca' : '1px solid #e0e7ff',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                <Timer color={timeRemaining < 300 ? 'error' : 'primary'} sx={{ fontSize: 20 }} />
+                <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.08em' }}>
+                  TIME REMAINING
+                </Typography>
+              </Box>
+              <Typography
+                variant="h3"
+                fontWeight={900}
+                color={timeRemaining < 300 ? 'error.main' : 'primary.main'}
+                sx={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}
+              >
+                {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+              </Typography>
+              {timeRemaining < 300 && (
+                <Typography variant="caption" color="error.main" sx={{ fontWeight: 700, mt: 0.5 }}>
+                  ⚠ AUTO-SUBMIT IMMINENT
+                </Typography>
+              )}
+            </Box>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Chip label={`Answered: ${answeredCount}`} color="success" />
-          {unansweredCount > 0 && (
-            <Chip label={`Unanswered: ${unansweredCount}`} color="warning" />
-          )}
-        </Box>
+            <Divider sx={{ my: 2 }} />
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {currentQuestionIdx < activeQuestions.length - 1 ? (
-            <Button variant="contained" onClick={handleNext}>
-              Next
-            </Button>
-          ) : (
+            {/* Progress metrics */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary' }}>PROGRESS</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main' }}>
+                    {answeredCount} / {activeQuestions.length}
+                  </Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={progress}
+                  sx={{
+                    height: 8,
+                    borderRadius: 4,
+                    bgcolor: '#f1f5f9',
+                    '& .MuiLinearProgress-bar': {
+                      borderRadius: 4,
+                      background: 'linear-gradient(90deg, #6366f1, #4f46e5)',
+                    }
+                  }}
+                />
+              </Box>
+
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary">Answered</Typography>
+                <Chip label={answeredCount} color="success" size="small" sx={{ fontWeight: 800, minWidth: 40 }} />
+              </Box>
+
+              {unansweredCount > 0 ? (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">Unanswered</Typography>
+                  <Chip label={unansweredCount} color="warning" size="small" sx={{ fontWeight: 800, minWidth: 40 }} />
+                </Box>
+              ) : (
+                <Box sx={{ p: 1.5, bgcolor: '#f0fdf4', borderRadius: 2, border: '1px solid #bbf7d0', textAlign: 'center' }}>
+                  <Typography variant="body2" color="#166534" fontWeight="bold">✓ All Questions Answered!</Typography>
+                </Box>
+              )}
+            </Box>
+
+            {/* Submit Button */}
             <Button
               variant="contained"
-              color="success"
+              fullWidth
+              size="large"
               onClick={() => setOpenSubmitDialog(true)}
+              sx={{
+                py: 1.5,
+                borderRadius: 3,
+                fontWeight: 800,
+                textTransform: 'none',
+                fontSize: '0.95rem',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                boxShadow: '0 4px 15px rgba(16,185,129,0.3)',
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 6px 20px rgba(16,185,129,0.4)',
+                }
+              }}
             >
-              Submit Exam
+              Submit Assessment
             </Button>
-          )}
+          </Paper>
+
+          {/* Question Grid Index Card */}
+          <Paper
+            elevation={0}
+            sx={{ p: 3, borderRadius: 4, border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.secondary' }}>
+                QUESTION INDEX
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: '#6366f1' }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>Done</Typography>
+                <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: '#f1f5f9', border: '1px solid #cbd5e1', ml: 1 }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>Blank</Typography>
+              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {activeQuestions.map((q: any, idx: number) => {
+                const isAnswered = answers[q.id] !== undefined && String(answers[q.id]).trim() !== '';
+                return (
+                  <Box
+                    key={q.id}
+                    onClick={() => {
+                      const el = document.getElementById(q.id);
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: isAnswered ? '#6366f1' : '#f1f5f9',
+                      color: isAnswered ? 'white' : '#64748b',
+                      fontWeight: 800,
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      border: '1.5px solid transparent',
+                      transition: 'all 0.15s',
+                      '&:hover': {
+                        borderColor: '#6366f1',
+                        transform: 'scale(1.1)',
+                        bgcolor: isAnswered ? '#4f46e5' : '#e2e8f0',
+                      }
+                    }}
+                  >
+                    {idx + 1}
+                  </Box>
+                );
+              })}
+            </Box>
+          </Paper>
         </Box>
+
+        {/* Mobile: Bottom fixed bar for timer on small screens */}
       </Box>
 
-      {/* Confirmation Dialog */}
-      <Dialog open={openSubmitDialog} onClose={() => setOpenSubmitDialog(false)}>
-        <DialogTitle>Submit Exam?</DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" gutterBottom>
-            Are you sure you want to submit your exam?
+      {/* Mobile sticky bottom bar */}
+      <Box
+        sx={{
+          display: { xs: 'flex', md: 'none' },
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 100,
+          bgcolor: 'white',
+          borderTop: '1px solid #e2e8f0',
+          boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
+          p: 2,
+          gap: 2,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Timer color={timeRemaining < 300 ? 'error' : 'primary'} />
+          <Typography
+            variant="h6"
+            fontWeight={900}
+            color={timeRemaining < 300 ? 'error.main' : 'primary.main'}
+            sx={{ fontVariantNumeric: 'tabular-nums' }}
+          >
+            {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
           </Typography>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2">
-              Answered questions: {answeredCount} / {activeQuestions.length}
+          <Typography variant="caption" color="text.secondary" fontWeight={700}>
+            {answeredCount}/{activeQuestions.length} done
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          size="small"
+          onClick={() => setOpenSubmitDialog(true)}
+          sx={{
+            fontWeight: 800,
+            textTransform: 'none',
+            borderRadius: 2.5,
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            px: 3
+          }}
+        >
+          Submit
+        </Button>
+      </Box>
+
+      {/* Confirmation Submit Dialog */}
+      <Dialog open={openSubmitDialog} onClose={() => setOpenSubmitDialog(false)} PaperProps={{ sx: { borderRadius: 4, p: 1 } }}>
+        <DialogTitle sx={{ fontWeight: 900 }}>Submit Your Assessment?</DialogTitle>
+        <DialogContent sx={{ mt: 1 }}>
+          <Typography variant="body1" color="text.secondary" gutterBottom>
+            Are you sure you want to finalize and log your assessment answers?
+          </Typography>
+          <Box sx={{ mt: 2.5, p: 2, bgcolor: '#f8fafc', borderRadius: 3 }}>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              Answered: <strong>{answeredCount} / {activeQuestions.length}</strong>
             </Typography>
-            {unansweredCount > 0 && (
-              <Typography variant="body2" color="warning.main">
-                Warning: You have {unansweredCount} unanswered question(s)
+            {unansweredCount > 0 ? (
+              <Typography variant="body2" color="error.main" fontWeight="bold">
+                Attention: You have {unansweredCount} unanswered question(s)!
+              </Typography>
+            ) : (
+              <Typography variant="body2" color="success.main" fontWeight="bold">
+                Excellent! All questions have been addressed.
               </Typography>
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenSubmitDialog(false)}>Continue Exam</Button>
-          <Button onClick={handleSubmit} variant="contained" color="success">
-            Submit
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setOpenSubmitDialog(false)} sx={{ fontWeight: 700 }}>Continue Exam</Button>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            color="success"
+            sx={{ borderRadius: 2.5, fontWeight: 700, px: 3 }}
+          >
+            Submit Exam
           </Button>
         </DialogActions>
       </Dialog>

@@ -717,80 +717,134 @@ export default function ClassroomDetail() {
 
       {/* TAB 3: GRADES MATRIX (INSTRUCTOR ONLY) */}
       {activeTab === 3 && isInstructor && (
-        <TableContainer
-          component={Paper}
-          sx={{
-            borderRadius: 4,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-            overflowX: 'auto',
-            '&::-webkit-scrollbar': { height: 6 },
-            '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: 3 },
-          }}
-        >
-          <Table sx={{ minWidth: 650 }}>
-            <TableHead sx={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)' }}>
-              <TableRow>
-                <TableCell style={{ fontWeight: 'bold', color: 'white' }}>Student Name</TableCell>
-                <TableCell style={{ fontWeight: 'bold', color: 'white' }}>Email Address</TableCell>
-                {rawClassExams.map((exam) => (
-                  <TableCell key={exam.id} align="center" style={{ fontWeight: 'bold', color: 'white' }}>
-                    {exam.title}<br />
-                    <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(Cap: {exam.totalPoints} pts)</span>
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {students.length === 0 ? (
+        <Box>
+          {/* Assessment Type Legend */}
+          <Box sx={{ display: 'flex', gap: 1.5, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary" fontWeight={700}>Assessment Types:</Typography>
+            <Chip size="small" label="Midterm Exam" sx={{ bgcolor: '#dbeafe', color: '#1e40af', fontWeight: 700, border: '1px solid #bfdbfe' }} />
+            <Chip size="small" label="Final Exam" sx={{ bgcolor: '#fee2e2', color: '#991b1b', fontWeight: 700, border: '1px solid #fecaca' }} />
+            <Chip size="small" label="Other/Custom" sx={{ bgcolor: '#f3f4f6', color: '#374151', fontWeight: 700, border: '1px solid #d1d5db' }} />
+          </Box>
+
+          <TableContainer
+            component={Paper}
+            sx={{
+              borderRadius: 4,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+              overflowX: 'auto',
+              '&::-webkit-scrollbar': { height: 6 },
+              '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: 3 },
+            }}
+          >
+            <Table sx={{ minWidth: 650 }}>
+              <TableHead sx={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)' }}>
                 <TableRow>
-                  <TableCell colSpan={2 + rawClassExams.length} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary">No students enrolled to display grades.</Typography>
-                  </TableCell>
+                  <TableCell style={{ fontWeight: 'bold', color: 'white', minWidth: 160 }}>Student Name</TableCell>
+                  <TableCell style={{ fontWeight: 'bold', color: 'white', minWidth: 200 }}>Email Address</TableCell>
+                  {rawClassExams.map((exam) => {
+                    const examType = exam.type || '';
+                    const isMidterm = examType.toLowerCase().includes('midterm');
+                    const isFinal = examType.toLowerCase().includes('final');
+                    const typeBg = isMidterm ? 'rgba(219,234,254,0.25)' : isFinal ? 'rgba(254,226,226,0.25)' : 'rgba(255,255,255,0.1)';
+                    const typeBorder = isMidterm ? '1px solid rgba(191,219,254,0.4)' : isFinal ? '1px solid rgba(252,165,165,0.4)' : '1px solid rgba(255,255,255,0.2)';
+                    return (
+                      <TableCell key={exam.id} align="center" style={{ fontWeight: 'bold', color: 'white', minWidth: 180 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                          {examType && (
+                            <Box
+                              sx={{
+                                px: 1.5,
+                                py: 0.4,
+                                borderRadius: 1.5,
+                                bgcolor: typeBg,
+                                border: typeBorder,
+                                display: 'inline-block',
+                              }}
+                            >
+                              <Typography variant="caption" sx={{ fontWeight: 800, color: 'white', fontSize: '0.65rem', letterSpacing: '0.04em' }}>
+                                {examType.toUpperCase()}
+                              </Typography>
+                            </Box>
+                          )}
+                          <Typography variant="body2" fontWeight={800} sx={{ color: 'white', lineHeight: 1.3 }}>
+                            {exam.title}
+                          </Typography>
+                          <Typography variant="caption" sx={{ opacity: 0.8, color: 'white' }}>
+                            Cap: {exam.totalPoints} pts
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
-              ) : (
-                students.map((student) => (
-                  <TableRow key={student.id} hover>
-                    <TableCell sx={{ fontWeight: 'medium' }}>{student.name}</TableCell>
-                    <TableCell>{student.email}</TableCell>
-                    {rawClassExams.map((exam) => {
-                      const attempt = examAttempts.find(
-                        (a) => a.examId === exam.id && a.studentId === student.id
-                      );
-                      if (attempt && attempt.submittedAt && attempt.score !== undefined) {
-                        const { rawPct, transmutedPct, grade, remark, color } = convertToTransmutedOMSCGrade(attempt.score, exam.totalPoints);
+              </TableHead>
+              <TableBody>
+                {students.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2 + rawClassExams.length} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary">No students enrolled to display grades.</Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  students.map((student) => (
+                    <TableRow key={student.id} hover>
+                      <TableCell sx={{ fontWeight: 'medium' }}>{student.name}</TableCell>
+                      <TableCell>{student.email}</TableCell>
+                      {rawClassExams.map((exam) => {
+                        const attempt = examAttempts.find(
+                          (a) => a.examId === exam.id && a.studentId === student.id
+                        );
+                        if (attempt && attempt.submittedAt && attempt.score !== undefined) {
+                          const { rawPct, transmutedPct, grade, remark, color } = convertToTransmutedOMSCGrade(attempt.score, exam.totalPoints);
+                          const passed = transmutedPct >= 75;
+                          return (
+                            <TableCell key={exam.id} align="center">
+                              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                                <Typography variant="body2" fontWeight="bold">
+                                  {attempt.score} / {exam.totalPoints}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  Raw: {rawPct.toFixed(1)}%
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
+                                  Transmuted: {transmutedPct.toFixed(1)}%
+                                </Typography>
+                                <Chip
+                                  label={`${grade} — ${remark}`}
+                                  size="small"
+                                  sx={{ bgcolor: 'white', border: '1px solid', borderColor: color, color: color, fontWeight: 'bold', mt: 0.5, fontSize: '0.7rem' }}
+                                />
+                                <Chip
+                                  label={passed ? 'PASSED' : 'FAILED'}
+                                  size="small"
+                                  sx={{
+                                    bgcolor: passed ? '#dcfce7' : '#fee2e2',
+                                    color: passed ? '#166534' : '#991b1b',
+                                    border: `1px solid ${passed ? '#86efac' : '#fca5a5'}`,
+                                    fontWeight: 800,
+                                    fontSize: '0.62rem',
+                                  }}
+                                />
+                              </Box>
+                            </TableCell>
+                          );
+                        }
                         return (
-                          <TableCell key={exam.id} align="center">
+                          <TableCell key={exam.id} align="center" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                              <Typography variant="body2" fontWeight="bold">
-                                {attempt.score} / {exam.totalPoints}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Raw: {rawPct.toFixed(1)}%
-                              </Typography>
-                              <Typography variant="caption" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
-                                Transmuted: {transmutedPct.toFixed(1)}%
-                              </Typography>
-                              <Chip
-                                label={`${grade} (${remark})`}
-                                size="small"
-                                sx={{ bgcolor: 'white', border: '1px solid', borderColor: color, color: color, fontWeight: 'bold', mt: 0.5 }}
-                              />
+                              <Typography variant="caption" color="text.disabled">—</Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', fontSize: '0.72rem' }}>Not Submitted</Typography>
                             </Box>
                           </TableCell>
                         );
-                      }
-                      return (
-                        <TableCell key={exam.id} align="center" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                          Not Submitted
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                      })}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
       )}
 
       {/* View Material Dialog */}
