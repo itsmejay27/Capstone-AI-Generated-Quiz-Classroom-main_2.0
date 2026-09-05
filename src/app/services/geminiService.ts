@@ -9,8 +9,7 @@ export const DEFAULT_GEMINI_API_KEY =
 export const GEMINI_MODELS = [
   { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite (Ultra Fast 1.9s - Recommended)' },
   { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash (Balanced)' },
-  { id: 'gemini-flash-latest', name: 'Gemini Flash Latest (Dynamic Latest)' },
-  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash' },
+  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (High Performance)' },
 ];
 
 export function getStoredGeminiApiKey(): string {
@@ -87,7 +86,7 @@ Respond ONLY with raw valid JSON matching this schema:
   ]
 }`;
 
-  const modelsToTry = Array.from(new Set([requestedModel, 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.6-flash']));
+  const modelsToTry = Array.from(new Set([requestedModel, 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash']));
   let rawQuestions: any[] = [];
   let lastError: any = null;
 
@@ -237,7 +236,7 @@ Respond with JSON:
 export async function generateReviewerWithGemini(params: GeminiReviewerParams): Promise<any[]> {
   const key = (params.apiKey || getStoredGeminiApiKey()).trim();
   const requestedModel = params.model || 'gemini-3.5-flash-lite';
-  const modelsToTry = Array.from(new Set([requestedModel, 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.6-flash']));
+  const modelsToTry = Array.from(new Set([requestedModel, 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash']));
 
   const moduleCounts = { easy: 3, normal: 5, hard: 8 };
   const itemsPerModule = { easy: 5, normal: 8, hard: 12 };
