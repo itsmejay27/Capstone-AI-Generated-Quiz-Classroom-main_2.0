@@ -45,7 +45,38 @@ export default function Reviewer() {
   );
 
   const openReviewer = (rev: any) => {
-    setActiveReviewer(rev);
+    let normalized = { ...rev };
+
+    // If reviewer has no modules array or modules is empty, auto-wrap questions into a single study module
+    if (!normalized.modules || !Array.isArray(normalized.modules) || normalized.modules.length === 0) {
+      const qList = normalized.questions || [
+        {
+          id: `q-norm-1`,
+          type: 'multiple-choice',
+          question: `Sample Question for ${normalized.subject || 'Subject'}`,
+          options: ['Core Concept A', 'Option B', 'Option C', 'Option D'],
+          correctAnswer: 0,
+          explanation: `Fundamental rule governing ${normalized.subject || 'Subject'}.`,
+        }
+      ];
+
+      normalized.modules = [
+        {
+          id: `mod-norm-1`,
+          number: 1,
+          title: `Direct Quiz & Study Guide`,
+          topic: normalized.subject || 'General Subject',
+          lessonContent: `### Study Guide: ${normalized.title}\n\nKey Concepts for **${normalized.subject}**:\n- Review all ${qList.length} assessment items.\n- Practice flashcards and test your mastery with the interactive quiz below.`,
+          questions: qList,
+          status: 'unlocked',
+          bestScore: null,
+          attempts: 0,
+        }
+      ];
+    }
+
+    setActiveReviewer(normalized);
+    setModuleIdx(0);
     setPhase('modules');
     setAnswers({});
     setQuizScore(null);

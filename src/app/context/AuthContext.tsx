@@ -1,10 +1,13 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types';
+import { User, UserRole } from '../types';
 import { mockUsers, mockClassrooms, mockExams, mockQuestionBank, mockExamAttempts } from '../data/mockData';
+import { parseGoogleJwt } from '../utils/authUtils';
 
 interface AuthContextType {
   currentUser: User | null;
+  users: User[];
   login: (email: string, password: string) => boolean;
+  loginWithGoogle: (credential: string, role?: UserRole) => boolean;
   logout: () => void;
   switchAccount: (userId: string) => void;
   isAuthenticated: boolean;
@@ -35,10 +38,24 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [users, setUsers] = useState<User[]>(() => {
+    const stored = localStorage.getItem('registeredUsers');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    localStorage.setItem('registeredUsers', JSON.stringify(mockUsers));
+    return mockUsers;
+  });
+
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const savedId = localStorage.getItem('currentUserId');
     if (savedId) {
-      return mockUsers.find((u) => u.id === savedId) || null;
+      const stored = localStorage.getItem('registeredUsers');
+      const currentUsers: User[] = stored ? JSON.parse(stored) : mockUsers;
+      return currentUsers.find((u) => u.id === savedId) || null;
     }
     return null;
   });
@@ -170,26 +187,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: 'rev-1',
         title: 'Reviewer: Web Technologies Study Aid',
         subject: 'Computer Science',
-        questions: [
+        difficulty: 'normal',
+        difficultyLabel: 'Normal – Multiple Choice (2 modules)',
+        moduleCount: 2,
+        itemsPerModule: 2,
+        source: 'Sample Course Material',
+        status: 'in-progress',
+        currentModuleIndex: 0,
+        modules: [
           {
-            id: 'rq-1',
-            type: 'multiple-choice',
-            question: 'Which of the following describes the purpose of a CSS Media Query?',
-            options: [
-              'To query the database for styling values',
-              'To apply styles based on the device characteristics such as screen width',
-              'To play media files in the background',
-              'To configure structural HTML tags'
+            id: 'mod-seed-1',
+            number: 1,
+            title: 'Module 1: CSS & Web Layouts',
+            topic: 'CSS & Web Layouts',
+            lessonContent: '### Module 1: CSS & Web Layouts\n\nCSS (Cascading Style Sheets) enables styling and media queries for responsive web application layouts across different devices.',
+            questions: [
+              {
+                id: 'rq-1',
+                type: 'multiple-choice',
+                question: 'Which of the following describes the purpose of a CSS Media Query?',
+                options: [
+                  'To query the database for styling values',
+                  'To apply styles based on device screen characteristics',
+                  'To play media files in the background',
+                  'To configure structural HTML tags'
+                ],
+                correctAnswer: 1,
+                explanation: 'Media queries allow web developers to apply different CSS rules depending on the rendering device screen width, orientation, and resolution.'
+              }
             ],
-            correctAnswer: 1,
-            explanation: 'Media queries allow web developers to apply different CSS rules depending on the rendering device screen width, orientation, and resolution.'
+            status: 'unlocked',
+            bestScore: null,
+            attempts: 0,
           },
           {
-            id: 'rq-2',
-            type: 'true-false',
-            question: 'The DOM (Document Object Model) is a built-in compiler for JS code.',
-            correctAnswer: 'false',
-            explanation: 'The DOM is an API representation of the HTML document structure, permitting JavaScript scripts to access and manipulate page nodes dynamically.'
+            id: 'mod-seed-2',
+            number: 2,
+            title: 'Module 2: DOM & JavaScript Execution',
+            topic: 'DOM & JavaScript Execution',
+            lessonContent: '### Module 2: DOM & JavaScript Execution\n\nThe Document Object Model (DOM) is an object representation of HTML nodes in memory, allowing script manipulation.',
+            questions: [
+              {
+                id: 'rq-2',
+                type: 'true-false',
+                question: 'The DOM (Document Object Model) is a built-in compiler for JS code.',
+                correctAnswer: 'false',
+                explanation: 'The DOM is an API representation of the HTML document structure, permitting JavaScript scripts to access and manipulate page nodes dynamically.'
+              }
+            ],
+            status: 'unlocked',
+            bestScore: null,
+            attempts: 0,
           }
         ],
         createdAt: new Date().toISOString(),
@@ -209,7 +257,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {};
   });
 
-  // Keep localStorage in sync when states change
+  useEffect(() => {
+    localStorage.setItem('registeredUsers', JSON.stringify(users));
+  }, [users]);
+
   useEffect(() => {
     localStorage.setItem('classrooms', JSON.stringify(classrooms));
   }, [classrooms]);
@@ -235,8 +286,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [classroomMaterials]);
 
   const login = (email: string, password: string): boolean => {
-    const user = mockUsers.find(
-      (u) => u.email === email && u.password === password
+    const user = users.find(
+      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
     );
     if (user) {
       setCurrentUser(user);
@@ -246,13 +297,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
+  const loginWithGoogle = (credential: string, role: UserRole = 'instructor'): boolean => {
+    const payload = parseGoogleJwt(credential);
+    if (!payload || !payload.email) {
+      return false;
+    }
+
+    const googleEmail = payload.email.toLowerCase();
+    const existingUser = users.find((u) => u.email.toLowerCase() === googleEmail);
+
+    if (existingUser) {
+      const updatedUser: User = {
+        ...existingUser,
+        name: payload.name || existingUser.name,
+        avatar: payload.picture || existingUser.avatar,
+      };
+      setUsers((prev) => prev.map((u) => (u.id === existingUser.id ? updatedUser : u)));
+      setCurrentUser(updatedUser);
+      localStorage.setItem('currentUserId', updatedUser.id);
+      return true;
+    }
+
+    const newUser: User = {
+      id: `google-${payload.sub || Date.now()}`,
+      email: payload.email,
+      password: '',
+      name: payload.name || payload.email.split('@')[0],
+      role: role,
+      avatar: payload.picture,
+    };
+
+    setUsers((prev) => [...prev, newUser]);
+    setCurrentUser(newUser);
+    localStorage.setItem('currentUserId', newUser.id);
+    return true;
+  };
+
   const logout = () => {
     setCurrentUser(null);
     localStorage.removeItem('currentUserId');
   };
 
   const switchAccount = (userId: string) => {
-    const user = mockUsers.find((u) => u.id === userId);
+    const user = users.find((u) => u.id === userId);
     if (user) {
       setCurrentUser(user);
       localStorage.setItem('currentUserId', user.id);
@@ -359,7 +446,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         currentUser,
+        users,
         login,
+        loginWithGoogle,
         logout,
         switchAccount,
         isAuthenticated: !!currentUser,

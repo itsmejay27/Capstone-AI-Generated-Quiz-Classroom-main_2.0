@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router';
-import { useAuth, mockUsers } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import {
   Container,
   Paper,
@@ -102,15 +102,15 @@ function getMaterialIcon(filename: string) {
 
 export default function ClassroomDetail() {
   const { classroomId } = useParams();
-  const { currentUser, classrooms, exams, examAttempts, classroomMaterials, addClassroomMaterial, deleteClassroomMaterial } = useAuth();
+  const { currentUser, users, classrooms, exams, examAttempts, classroomMaterials, addClassroomMaterial, deleteClassroomMaterial } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
   const [viewMaterial, setViewMaterial] = useState<any | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const classroom = classrooms.find((c) => c.id === classroomId);
-  const instructor = mockUsers.find((u) => u.id === classroom?.instructorId);
-  const students = mockUsers.filter((u) => classroom?.students.includes(u.id));
+  const instructor = users.find((u) => u.id === classroom?.instructorId);
+  const students = users.filter((u) => classroom?.students.includes(u.id));
 
   const isInstructor = currentUser?.role === 'instructor';
   const materials = classroomMaterials[classroomId || ''] || [];
@@ -175,7 +175,7 @@ export default function ClassroomDetail() {
   const tabCount = isInstructor ? 4 : 3;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: 4, px: { xs: 2, sm: 3, md: 5, lg: 6 } }}>
       <Button
         startIcon={<ArrowBack />}
         onClick={() => navigate('/dashboard')}

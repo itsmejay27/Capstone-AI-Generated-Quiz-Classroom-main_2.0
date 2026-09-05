@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import OllamaConfigControl, { AIEngineType } from '../components/OllamaConfigControl';
+import { extractFilesContent, generateExamWithOllama, regenerateQuestionWithOllama } from '../services/ollamaService';
+import { generateExamWithGemini, regenerateQuestionWithGemini, buildTopicDrivenQuestions } from '../services/geminiService';
 import {
   Container,
   Paper,
@@ -175,7 +178,7 @@ export default function ExamGenerator() {
   const { classroomId } = useParams();
   const { currentUser, saveExamToRepository } = useAuth();
   const navigate = useNavigate();
-  
+
   const [activeStep, setActiveStep] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [regeneratingMap, setRegeneratingMap] = useState<Record<string, boolean>>({});
@@ -208,15 +211,115 @@ export default function ExamGenerator() {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [newQuestionType, setNewQuestionType] = useState('multiple-choice');
 
+  // AI Engine states
+  const [aiEngine, setAiEngine] = useState<AIEngineType>('gemini');
+  const [geminiModel, setGeminiModel] = useState('gemini-3.5-flash-lite');
+  const [ollamaModel, setOllamaModel] = useState('llama3.2:latest');
+  const [ollamaUrl, setOllamaUrl] = useState('/api/ollama');
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [generationStatusText, setGenerationStatusText] = useState('');
+
   const activeQuestionCount = mcCount + tfCount + saCount + essayCount;
   const totalGeneratedCount = activeQuestionCount + extraCount;
 
   const handleNext = () => {
     if (activeStep === 1) {
-      // Transitioning from Summary step (index 1) to Review & Generate (index 2)
-      generateMockQuestions();
+      handleGenerateQuestions();
+    } else {
+      setActiveStep((prev) => prev + 1);
     }
-    setActiveStep((prev) => prev + 1);
+  };
+
+  const handleGenerateQuestions = async () => {
+    setActiveStep(2);
+    setGenerating(true);
+    setGenerationError(null);
+
+    // Prioritize user's generationPrompt as the core AI topic
+    const primarySubject = generationPrompt.trim() 
+      || topics.find((t) => t && t !== 'General Subject Matter') 
+      || examTitle.trim() 
+      || 'General Subject';
+
+    const effectiveTopics = Array.from(new Set([primarySubject, ...topics.filter((t) => t && t !== 'General Subject Matter')]));
+    const effectivePrompt = generationPrompt.trim() || primarySubject;
+
+    if (aiEngine === 'gemini') {
+      try {
+        setGenerationStatusText(`Prompting Google Gemini AI (${geminiModel}) for ultra-fast generation on "${primarySubject}"...`);
+        const extractedText = await extractFilesContent([syllabus, tos, ...materials]);
+
+        const questions = await generateExamWithGemini({
+          model: geminiModel,
+          mcCount,
+          tfCount,
+          saCount,
+          essayCount,
+          extraCount,
+          difficulty,
+          topics: effectiveTopics,
+          generationPrompt: effectivePrompt,
+          uploadedText: extractedText,
+        });
+
+        setGeneratedQuestions(questions);
+      } catch (err: any) {
+        console.error('Gemini Generation error:', err);
+        const fallbackQuestions = buildTopicDrivenQuestions({
+          model: geminiModel,
+          mcCount,
+          tfCount,
+          saCount,
+          essayCount,
+          extraCount,
+          difficulty,
+          topics: effectiveTopics,
+          generationPrompt: effectivePrompt,
+        });
+        setGeneratedQuestions(fallbackQuestions);
+        setGenerationError(`Notice: Cloud AI call hit an error (${err.message || err}). Generated using topic-driven engine fallback.`);
+      } finally {
+        setGenerating(false);
+      }
+    } else {
+      try {
+        setGenerationStatusText(`Prompting local Ollama model (${ollamaModel}) for "${primarySubject}"...`);
+        const extractedText = await extractFilesContent([syllabus, tos, ...materials]);
+
+        const questions = await generateExamWithOllama({
+          model: ollamaModel,
+          mcCount,
+          tfCount,
+          saCount,
+          essayCount,
+          extraCount,
+          difficulty,
+          topics: effectiveTopics,
+          generationPrompt: effectivePrompt,
+          uploadedText: extractedText,
+          baseUrl: ollamaUrl,
+        });
+
+        setGeneratedQuestions(questions);
+      } catch (err: any) {
+        console.error('Ollama Generation error:', err);
+        const fallbackQuestions = buildTopicDrivenQuestions({
+          model: ollamaModel,
+          mcCount,
+          tfCount,
+          saCount,
+          essayCount,
+          extraCount,
+          difficulty,
+          topics: effectiveTopics,
+          generationPrompt: effectivePrompt,
+        });
+        setGeneratedQuestions(fallbackQuestions);
+        setGenerationError(`Notice: Ollama local AI connection issue (${err.message || err}). Generated using topic-driven engine fallback.`);
+      } finally {
+        setGenerating(false);
+      }
+    }
   };
 
   const handleBack = () => {
@@ -256,135 +359,24 @@ export default function ExamGenerator() {
     setTopics(topics.filter((_, i) => i !== index));
   };
 
-  // Generate N+E mock items based on the configuration input
+  // Generate topic-driven questions based on configuration input
   const generateMockQuestions = () => {
     setGenerating(true);
-    
-    // Simulate generation delay
     setTimeout(() => {
-      const items: any[] = [];
-      let idCounter = 1;
-
-      const currentTopic = topics[0] || 'Web Technologies';
-      const promptKeyword = generationPrompt.trim() ? `[Topic: ${generationPrompt.length > 40 ? generationPrompt.substring(0, 40) + '...' : generationPrompt}]` : `regarding ${currentTopic}`;
-
-      // 1. Multiple choice
-      for (let i = 0; i < mcCount; i++) {
-        items.push({
-          id: `gq-${idCounter++}`,
-          type: 'multiple-choice',
-          question: `Generated Multiple Choice Question ${i + 1} ${promptKeyword}: Which component handles layout styling in standard web applications?`,
-          options: ['CSS Style Sheets', 'SQL Queries', 'JSON Files', 'C++ Compilers'],
-          correctAnswer: 0,
-          points: 2,
-          difficulty: difficulty,
-          topic: currentTopic,
-          image: '',
-          optionsImages: ['', '', '', ''],
-        });
-      }
-
-      // 2. True / False
-      for (let i = 0; i < tfCount; i++) {
-        items.push({
-          id: `gq-${idCounter++}`,
-          type: 'true-false',
-          question: `Generated True/False Question ${i + 1} ${promptKeyword}: JavaScript runs in a single-threaded runtime environment by default.`,
-          correctAnswer: 'true',
-          points: 1,
-          difficulty: difficulty,
-          topic: currentTopic,
-          image: '',
-        });
-      }
-
-      // 3. Short Answer
-      for (let i = 0; i < saCount; i++) {
-        items.push({
-          id: `gq-${idCounter++}`,
-          type: 'short-answer',
-          question: `Generated Short Answer Question ${i + 1} ${promptKeyword}: What does DOM stand for in frontend engineering?`,
-          correctAnswer: 'Document Object Model',
-          points: 3,
-          difficulty: difficulty,
-          topic: currentTopic,
-          image: '',
-        });
-      }
-
-      // 4. Essay
-      for (let i = 0; i < essayCount; i++) {
-        items.push({
-          id: `gq-${idCounter++}`,
-          type: 'essay',
-          question: `Generated Essay Question ${i + 1} ${promptKeyword}: Discuss the architecture of modern single page applications and how state hydration is achieved.`,
-          points: 5,
-          difficulty: difficulty,
-          topic: currentTopic,
-          image: '',
-        });
-      }
-
-      // 5. Extra questions pool
-      for (let i = 0; i < extraCount; i++) {
-        const types = ['multiple-choice', 'true-false', 'short-answer', 'essay'];
-        const chosenType = types[i % types.length];
-        
-        if (chosenType === 'multiple-choice') {
-          items.push({
-            id: `gq-${idCounter++}`,
-            type: 'multiple-choice',
-            question: `Extra Pool Multiple Choice Question ${i + 1} ${promptKeyword}: What protocol is used to fetch web page content securely?`,
-            options: ['HTTPS', 'FTP', 'SMTP', 'SSH'],
-            correctAnswer: 0,
-            points: 2,
-            difficulty: difficulty,
-            topic: currentTopic,
-            image: '',
-            optionsImages: ['', '', '', ''],
-            isExtra: true,
-          });
-        } else if (chosenType === 'true-false') {
-          items.push({
-            id: `gq-${idCounter++}`,
-            type: 'true-false',
-            question: `Extra Pool True/False Question ${i + 1} ${promptKeyword}: HTML5 supports embedding native video files without Flash plugins.`,
-            correctAnswer: 'true',
-            points: 1,
-            difficulty: difficulty,
-            topic: currentTopic,
-            image: '',
-            isExtra: true,
-          });
-        } else if (chosenType === 'short-answer') {
-          items.push({
-            id: `gq-${idCounter++}`,
-            type: 'short-answer',
-            question: `Extra Pool Short Answer Question ${i + 1} ${promptKeyword}: What CSS flexbox property determines the layout direction of items?`,
-            correctAnswer: 'flex-direction',
-            points: 3,
-            difficulty: difficulty,
-            topic: currentTopic,
-            image: '',
-            isExtra: true,
-          });
-        } else {
-          items.push({
-            id: `gq-${idCounter++}`,
-            type: 'essay',
-            question: `Extra Pool Essay Question ${i + 1} ${promptKeyword}: Elaborate on structural SEO tags and their impacts on search engine crawlers.`,
-            points: 5,
-            difficulty: difficulty,
-            topic: currentTopic,
-            image: '',
-            isExtra: true,
-          });
-        }
-      }
-
+      const items = buildTopicDrivenQuestions({
+        model: '',
+        mcCount,
+        tfCount,
+        saCount,
+        essayCount,
+        extraCount,
+        difficulty,
+        topics,
+        generationPrompt,
+      });
       setGeneratedQuestions(items);
       setGenerating(false);
-    }, 2000);
+    }, 1200);
   };
 
   // Modify individual question content in editor state
@@ -470,11 +462,44 @@ export default function ExamGenerator() {
     setGeneratedQuestions(updated);
   };
 
-  // Smart AI Regeneration simulated feature
-  const handleRegenerateItem = (index: number, mode: 'full' | 'options' | 'answer') => {
+  // Smart AI Regeneration feature
+  const handleRegenerateItem = async (index: number, mode: 'full' | 'options' | 'answer') => {
     const q = generatedQuestions[index];
     setRegeneratingMap((prev) => ({ ...prev, [q.id]: true }));
 
+    if (aiEngine === 'gemini') {
+      try {
+        const updatedQ = await regenerateQuestionWithGemini(q, mode, undefined, geminiModel);
+        setGeneratedQuestions((prevQuestions) => {
+          const updated = [...prevQuestions];
+          updated[index] = updatedQ;
+          return updated;
+        });
+      } catch (err) {
+        console.warn('Gemini regenerate failed, running mock regenerate:', err);
+        runMockRegenerate(index, mode);
+      } finally {
+        setRegeneratingMap((prev) => ({ ...prev, [q.id]: false }));
+      }
+    } else {
+      try {
+        const updatedQ = await regenerateQuestionWithOllama(ollamaModel, q, mode, ollamaUrl);
+        setGeneratedQuestions((prevQuestions) => {
+          const updated = [...prevQuestions];
+          updated[index] = updatedQ;
+          return updated;
+        });
+      } catch (err) {
+        console.warn('Ollama regenerate item failed, running mock regeneration:', err);
+        runMockRegenerate(index, mode);
+      } finally {
+        setRegeneratingMap((prev) => ({ ...prev, [q.id]: false }));
+      }
+    }
+  };
+
+  const runMockRegenerate = (index: number, mode: 'full' | 'options' | 'answer') => {
+    const q = generatedQuestions[index];
     setTimeout(() => {
       setGeneratedQuestions((prevQuestions) => {
         const updated = [...prevQuestions];
@@ -490,7 +515,7 @@ export default function ExamGenerator() {
             const filtered = list.filter(item => item.question !== currentQ.question);
             chosen = filtered[Math.floor(Math.random() * filtered.length)];
           }
-          
+
           updated[index] = {
             ...currentQ,
             question: chosen.question,
@@ -502,13 +527,13 @@ export default function ExamGenerator() {
           if (type === 'multiple-choice' && currentQ.options) {
             const originalOptions = [...currentQ.options];
             const correctText = originalOptions[currentQ.correctAnswer];
-            
+
             // Fisher-Yates shuffle
             for (let i = originalOptions.length - 1; i > 0; i--) {
               const j = Math.floor(Math.random() * (i + 1));
               [originalOptions[i], originalOptions[j]] = [originalOptions[j], originalOptions[i]];
             }
-            
+
             const newCorrectIdx = originalOptions.indexOf(correctText);
             updated[index] = {
               ...currentQ,
@@ -521,13 +546,13 @@ export default function ExamGenerator() {
             if (nextAnswer === 'false') {
               if (!newText.includes(' NOT ') && !newText.includes(' not ')) {
                 newText = newText.replace('runs in', 'does NOT run in')
-                                .replace('supports', 'does NOT support')
-                                .replace('is a', 'is NOT a');
+                  .replace('supports', 'does NOT support')
+                  .replace('is a', 'is NOT a');
               }
             } else {
               newText = newText.replace('does NOT run in', 'runs in')
-                              .replace('does NOT support', 'supports')
-                              .replace('is NOT a', 'is a');
+                .replace('does NOT support', 'supports')
+                .replace('is NOT a', 'is a');
             }
             updated[index] = {
               ...currentQ,
@@ -547,12 +572,12 @@ export default function ExamGenerator() {
             let newText = currentQ.question;
             if (nextAnswer === 'false') {
               newText = newText.replace('runs in', 'does NOT run in')
-                              .replace('supports', 'does NOT support')
-                              .replace('is a', 'is NOT a');
+                .replace('supports', 'does NOT support')
+                .replace('is a', 'is NOT a');
             } else {
               newText = newText.replace('does NOT run in', 'runs in')
-                              .replace('does NOT support', 'supports')
-                              .replace('is NOT a', 'is a');
+                .replace('does NOT support', 'supports')
+                .replace('is NOT a', 'is a');
             }
             updated[index] = {
               ...currentQ,
@@ -663,7 +688,7 @@ export default function ExamGenerator() {
           borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0) 70%)',
         }} />
-        
+
         <Box sx={{ display: 'flex', alignItems: 'center', zIndex: 1 }}>
           <Box sx={{
             width: 56,
@@ -702,19 +727,19 @@ export default function ExamGenerator() {
           ))}
         </Stepper>
 
-        {/* Step 1: Exam Details & Configuration (Unified Step) */}
+        {/* Step 1: Exam Details & Configuration (Unified 2-Column Redesign) */}
         {activeStep === 0 && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            
-            {/* Section 1.1: Basic Information */}
-            <Card variant="outlined" sx={{ borderRadius: 3, p: 1, borderColor: '#e2e8f0' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-                  <ListAlt color="primary" />
-                  <Typography variant="h6" fontWeight="bold">1. Basic Exam Details</Typography>
-                </Box>
-                <Grid container spacing={3}>
-                  <Grid item xs={12}>
+          <Grid container spacing={3} sx={{ animation: 'fadeIn 0.3s ease' }}>
+            {/* LEFT COLUMN: Basic Details & AI Engine Selection */}
+            <Grid item xs={12} md={6}>
+              <Card variant="outlined" sx={{ borderRadius: 3.5, borderColor: '#e2e8f0', height: '100%', p: 1 }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                    <ListAlt color="primary" />
+                    <Typography variant="h6" fontWeight="bold">1. Exam Info & AI Engine</Typography>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
                     <TextField
                       fullWidth
                       label="Exam Title"
@@ -722,395 +747,258 @@ export default function ExamGenerator() {
                       value={examTitle}
                       onChange={(e) => setExamTitle(e.target.value)}
                       required
-                      variant="outlined"
-                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2.5 } }}
                     />
-                  </Grid>
-                  <Grid item xs={12}>
+
                     <TextField
                       fullWidth
-                      label="Description"
-                      placeholder="Provide basic instructions or descriptions for the students..."
+                      label="Description / Student Instructions"
+                      placeholder="Provide basic instructions for students..."
                       value={examDescription}
                       onChange={(e) => setExamDescription(e.target.value)}
                       multiline
-                      rows={3}
-                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      rows={2}
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2.5 } }}
                     />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Duration (Minutes)"
-                      type="number"
-                      value={duration}
-                      onChange={(e) => setDuration(Number(e.target.value))}
-                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>Total Points Cap</InputLabel>
-                      <Select
-                        value={totalPoints}
-                        onChange={(e) => setTotalPoints(Number(e.target.value))}
-                        label="Total Points Cap"
-                        sx={{ borderRadius: 2 }}
-                      >
-                        {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((pts) => (
-                          <MenuItem key={pts} value={pts}>
-                            {pts} Points
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
 
-                  {/* Redesigned Assessment Selection Cards */}
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700, color: 'text.secondary' }}>
-                      Assessment Classification
-                    </Typography>
                     <Grid container spacing={2}>
-                      {[
-                        { title: 'Midterm Exam', desc: 'Official mid-semester benchmark assessment.' },
-                        { title: 'Final Exam', desc: 'End-of-semester comprehensive assessment.' },
-                        { title: 'Other', desc: 'Create custom quizzes, unit tests, or assessments.' }
-                      ].map((option) => {
-                        const isSelected = assessmentType === option.title;
-                        return (
-                          <Grid item xs={12} md={4} key={option.title}>
-                            <Card
-                              variant="outlined"
-                              sx={{
-                                borderRadius: 3,
-                                border: isSelected ? '2px solid #6366f1' : '1px solid #e2e8f0',
-                                bgcolor: isSelected ? 'rgba(99, 102, 241, 0.03)' : 'inherit',
-                                transition: 'all 0.2s',
-                                '&:hover': { borderColor: isSelected ? '#6366f1' : '#cbd5e1' }
-                              }}
-                            >
-                              <CardActionArea onClick={() => setAssessmentType(option.title)} sx={{ p: 2, height: '100%' }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                  <Typography variant="subtitle1" fontWeight="bold">
-                                    {option.title}
-                                  </Typography>
-                                  <Radio checked={isSelected} size="small" color="primary" />
-                                </Box>
-                                <Typography variant="caption" color="text.secondary">
-                                  {option.desc}
-                                </Typography>
-                              </CardActionArea>
-                            </Card>
-                          </Grid>
-                        );
-                      })}
-                    </Grid>
-                    
-                    {/* Custom Assessment Input */}
-                    {assessmentType === 'Other' && (
-                      <Box sx={{ mt: 2, animation: 'fadeIn 0.3s ease' }}>
+                      <Grid item xs={6}>
                         <TextField
                           fullWidth
-                          label="Custom Assessment Type Name"
-                          placeholder="e.g. Unit Test 3, Dynamic Quiz 2"
-                          value={customAssessmentType}
-                          onChange={(e) => setCustomAssessmentType(e.target.value)}
-                          required
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                          label="Duration (Minutes)"
+                          type="number"
+                          value={duration}
+                          onChange={(e) => setDuration(Number(e.target.value))}
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2.5 } }}
                         />
-                      </Box>
-                    )}
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Total Points Cap</InputLabel>
+                          <Select
+                            value={totalPoints}
+                            onChange={(e) => setTotalPoints(Number(e.target.value))}
+                            label="Total Points Cap"
+                            sx={{ borderRadius: 2.5 }}
+                          >
+                            {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((pts) => (
+                              <MenuItem key={pts} value={pts}>{pts} Points</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    </Grid>
 
-            {/* Section 1.2: Syllabus & Alignment Materials */}
-            <Card variant="outlined" sx={{ borderRadius: 3, p: 1, borderColor: '#e2e8f0' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-                  <MenuBook color="primary" />
-                  <Typography variant="h6" fontWeight="bold">2. Syllabus & Alignment Materials</Typography>
-                </Box>
-                <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-                  Attach your Table of Specifications (TOS), course syllabus, or lesson slides. The AI models align generated question difficulty directly with your uploads.
-                </Alert>
-
-                <Grid container spacing={3}>
-                  <Grid item xs={12} md={4}>
-                    <Paper
-                      variant="outlined"
-                      sx={{
-                        p: 3,
-                        textAlign: 'center',
-                        borderRadius: 3,
-                        borderStyle: 'dashed',
-                        borderColor: syllabus ? 'primary.main' : '#cbd5e1',
-                        bgcolor: syllabus ? 'rgba(99, 102, 241, 0.01)' : 'inherit',
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <FileIcon color={syllabus ? 'primary' : 'disabled'} sx={{ fontSize: 32, mb: 1.5 }} />
-                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Syllabus</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>PDF, DOC, DOCX files</Typography>
-                      <Button
-                        variant="outlined"
-                        component="label"
-                        size="small"
-                        startIcon={<Upload />}
-                        sx={{ borderRadius: 2, textTransform: 'none' }}
-                      >
-                        Choose File
-                        <input type="file" hidden accept=".pdf,.doc,.docx" onChange={(e) => handleFileUpload(e, 'syllabus')} />
-                      </Button>
-                      {syllabus && (
-                        <Chip
-                          label={syllabus.name}
-                          onDelete={() => setSyllabus(null)}
-                          sx={{ mt: 2, maxW: '90%' }}
-                          color="primary"
-                          variant="outlined"
-                          size="small"
-                        />
-                      )}
-                    </Paper>
-                  </Grid>
-
-                  <Grid item xs={12} md={4}>
-                    <Paper
-                      variant="outlined"
-                      sx={{
-                        p: 3,
-                        textAlign: 'center',
-                        borderRadius: 3,
-                        borderStyle: 'dashed',
-                        borderColor: tos ? 'secondary.main' : '#cbd5e1',
-                        bgcolor: tos ? 'rgba(156, 39, 176, 0.01)' : 'inherit',
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <FileIcon color={tos ? 'secondary' : 'disabled'} sx={{ fontSize: 32, mb: 1.5 }} />
-                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Table of Specifications</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>Spreadsheet, PDF, DOCX</Typography>
-                      <Button
-                        variant="outlined"
-                        component="label"
-                        size="small"
-                        color="secondary"
-                        startIcon={<Upload />}
-                        sx={{ borderRadius: 2, textTransform: 'none' }}
-                      >
-                        Choose File
-                        <input type="file" hidden accept=".pdf,.doc,.docx,.xlsx" onChange={(e) => handleFileUpload(e, 'tos')} />
-                      </Button>
-                      {tos && (
-                        <Chip
-                          label={tos.name}
-                          onDelete={() => setTos(null)}
-                          sx={{ mt: 2, maxW: '90%' }}
-                          color="secondary"
-                          variant="outlined"
-                          size="small"
-                        />
-                      )}
-                    </Paper>
-                  </Grid>
-
-                  <Grid item xs={12} md={4}>
-                    <Paper
-                      variant="outlined"
-                      sx={{
-                        p: 3,
-                        textAlign: 'center',
-                        borderRadius: 3,
-                        borderStyle: 'dashed',
-                        borderColor: materials.length > 0 ? 'success.main' : '#cbd5e1',
-                        bgcolor: materials.length > 0 ? 'rgba(46, 125, 50, 0.01)' : 'inherit',
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <FileIcon color={materials.length > 0 ? 'success' : 'disabled'} sx={{ fontSize: 32, mb: 1.5 }} />
-                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Learning Materials</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>Course slides, readings, scripts</Typography>
-                      <Button
-                        variant="outlined"
-                        component="label"
-                        size="small"
-                        color="success"
-                        startIcon={<Upload />}
-                        sx={{ borderRadius: 2, textTransform: 'none' }}
-                      >
-                        Add Slide/Files
-                        <input type="file" hidden multiple accept=".pdf,.doc,.docx,.ppt,.pptx" onChange={(e) => handleFileUpload(e, 'materials')} />
-                      </Button>
-                      <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'center' }}>
-                        {materials.map((file, index) => (
+                    {/* Assessment Type Selection Chips */}
+                    <Box>
+                      <Typography variant="caption" sx={{ mb: 1, fontWeight: 700, color: 'text.secondary', display: 'block' }}>
+                        Assessment Type
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {['Midterm Exam', 'Final Exam', 'Quiz', 'Other'].map((type) => (
                           <Chip
-                            key={index}
-                            label={file.name}
-                            onDelete={() => setMaterials(materials.filter((_, i) => i !== index))}
-                            size="small"
-                            variant="outlined"
+                            key={type}
+                            label={type}
+                            onClick={() => setAssessmentType(type)}
+                            color={assessmentType === type ? 'primary' : 'default'}
+                            variant={assessmentType === type ? 'filled' : 'outlined'}
+                            clickable
+                            sx={{ fontWeight: 'bold', borderRadius: 2 }}
                           />
                         ))}
                       </Box>
-                    </Paper>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
+                      {assessmentType === 'Other' && (
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Custom Assessment Name (e.g. Unit Test 3)"
+                          value={customAssessmentType}
+                          onChange={(e) => setCustomAssessmentType(e.target.value)}
+                          sx={{ mt: 1.5, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                        />
+                      )}
+                    </Box>
 
-            {/* Section 1.3: Smart AI Parameters */}
-            <Card variant="outlined" sx={{ borderRadius: 3, p: 1, borderColor: '#e2e8f0' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-                  <Tune color="primary" />
-                  <Typography variant="h6" fontWeight="bold">3. Smart AI Generator Configuration</Typography>
-                </Box>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>Difficulty Strategy</InputLabel>
-                      <Select
-                        value={difficulty}
-                        onChange={(e) => setDifficulty(e.target.value)}
-                        label="Difficulty Strategy"
-                        sx={{ borderRadius: 2 }}
-                      >
-                        <MenuItem value="easy">Easy (Knowledge checks)</MenuItem>
-                        <MenuItem value="medium">Medium (Application target)</MenuItem>
-                        <MenuItem value="hard">Hard (Synthesis / Critical evaluating)</MenuItem>
-                        <MenuItem value="mixed">Mixed Distribution (TOS proportional)</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  <Grid item xs={12} md={6}>
-                    <Tooltip title="Generates an additional pool of randomized items. Instructors shuffle these to prevent cheating; each student receives a randomized selection from the pool.">
-                      <TextField
-                        fullWidth
-                        label="Extra Shuffled Items Pool (Anti-Cheat)"
-                        type="number"
-                        value={extraCount}
-                        onChange={(e) => setExtraCount(Math.max(0, Number(e.target.value)))}
-                        helperText="Creates extra alternative items to distribute randomly"
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    {/* Clean AI Engine & Model Selector */}
+                    <Box sx={{ mt: 1 }}>
+                      <OllamaConfigControl
+                        engine={aiEngine}
+                        onEngineChange={setAiEngine}
+                        selectedModel={ollamaModel}
+                        onModelChange={setOllamaModel}
+                        ollamaUrl={ollamaUrl}
+                        onUrlChange={setOllamaUrl}
+                        geminiModel={geminiModel}
+                        onGeminiModelChange={setGeminiModel}
                       />
-                    </Tooltip>
-                  </Grid>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
 
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="AI Core Prompt Instructions"
-                      placeholder="Add specific instructions: e.g. 'Concentrate on ES6 arrays, layout differences in flexbox, and semantic HTML accessibility'"
-                      value={generationPrompt}
-                      onChange={(e) => setGenerationPrompt(e.target.value)}
-                      multiline
-                      rows={3}
-                      helperText="Provides context and themes for the questions generated."
-                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                    />
-                  </Grid>
+            {/* RIGHT COLUMN: AI Topics, Difficulty, Allocations & File Attachments */}
+            <Grid item xs={12} md={6}>
+              <Card variant="outlined" sx={{ borderRadius: 3.5, borderColor: '#e2e8f0', height: '100%', p: 1 }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                    <Tune color="primary" />
+                    <Typography variant="h6" fontWeight="bold">2. Question Rules & Content</Typography>
+                  </Box>
 
-                  <Grid item xs={12}>
-                    <Divider sx={{ my: 1.5 }} />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 750, mb: 2 }}>
-                      Quantity Distributions (Set quantities by Question Type)
-                    </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                    {/* Difficulty & Anti-Cheat */}
                     <Grid container spacing={2}>
-                      <Grid item xs={6} md={3}>
-                        <TextField
-                          fullWidth
-                          label="Multiple Choice"
-                          type="number"
-                          value={mcCount}
-                          onChange={(e) => setMcCount(Math.max(0, Number(e.target.value)))}
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                        />
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Difficulty Strategy</InputLabel>
+                          <Select
+                            value={difficulty}
+                            onChange={(e) => setDifficulty(e.target.value)}
+                            label="Difficulty Strategy"
+                            sx={{ borderRadius: 2 }}
+                          >
+                            <MenuItem value="easy">Easy (Knowledge)</MenuItem>
+                            <MenuItem value="medium">Medium (Application)</MenuItem>
+                            <MenuItem value="hard">Hard (Synthesis)</MenuItem>
+                            <MenuItem value="mixed">Mixed Proportional</MenuItem>
+                          </Select>
+                        </FormControl>
                       </Grid>
-                      <Grid item xs={6} md={3}>
+                      <Grid item xs={12} sm={6}>
                         <TextField
                           fullWidth
-                          label="True / False"
+                          size="small"
+                          label="Anti-Cheat Extra Items Pool"
                           type="number"
-                          value={tfCount}
-                          onChange={(e) => setTfCount(Math.max(0, Number(e.target.value)))}
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                        />
-                      </Grid>
-                      <Grid item xs={6} md={3}>
-                        <TextField
-                          fullWidth
-                          label="Short Answer"
-                          type="number"
-                          value={saCount}
-                          onChange={(e) => setSaCount(Math.max(0, Number(e.target.value)))}
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                        />
-                      </Grid>
-                      <Grid item xs={6} md={3}>
-                        <TextField
-                          fullWidth
-                          label="Essay / Long Response"
-                          type="number"
-                          value={essayCount}
-                          onChange={(e) => setEssayCount(Math.max(0, Number(e.target.value)))}
+                          value={extraCount}
+                          onChange={(e) => setExtraCount(Math.max(0, Number(e.target.value)))}
                           sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                         />
                       </Grid>
                     </Grid>
-                    
-                    <Box sx={{ mt: 2.5, p: 2, bgcolor: '#f0fdf4', borderRadius: 2.5, display: 'flex', justifyContent: 'space-between', border: '1px solid #dcfce7' }}>
-                      <Typography variant="body2" sx={{ color: '#166534', fontWeight: 'bold' }}>
-                        Active Items (N): {activeQuestionCount}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#15803d', fontWeight: 'bold' }}>
-                        Total Pool Size (N + E): {totalGeneratedCount} items
-                      </Typography>
-                    </Box>
-                  </Grid>
 
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 750, mb: 1 }}>
-                      Topics to Highlight
-                    </Typography>
-                    {topics.map((topic, index) => (
-                      <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          value={topic}
-                          onChange={(e) => updateTopic(index, e.target.value)}
-                          placeholder="e.g. Asynchronous execution, Closures, DOM Manipulation"
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                        />
-                        <IconButton onClick={() => removeTopic(index)} color="error" disabled={topics.length === 1}>
-                          <Delete />
-                        </IconButton>
+                    <TextField
+                      fullWidth
+                      label="AI Prompt Focus / Guidelines"
+                      placeholder="e.g. Focus on ES6 async/await, Flexbox layout, and semantic HTML accessibility..."
+                      value={generationPrompt}
+                      onChange={(e) => setGenerationPrompt(e.target.value)}
+                      multiline
+                      rows={2}
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2.5 } }}
+                    />
+
+                    {/* Question Type Quantity Distribution */}
+                    <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2.5, border: '1px solid #e2e8f0' }}>
+                      <Typography variant="caption" sx={{ fontWeight: 750, color: 'text.secondary', display: 'block', mb: 1.5 }}>
+                        Question Type Quantities
+                      </Typography>
+                      <Grid container spacing={1.5}>
+                        <Grid item xs={6} sm={3}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Multiple Choice"
+                            type="number"
+                            value={mcCount}
+                            onChange={(e) => setMcCount(Math.max(0, Number(e.target.value)))}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: '#fff' } }}
+                          />
+                        </Grid>
+                        <Grid item xs={6} sm={3}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="True / False"
+                            type="number"
+                            value={tfCount}
+                            onChange={(e) => setTfCount(Math.max(0, Number(e.target.value)))}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: '#fff' } }}
+                          />
+                        </Grid>
+                        <Grid item xs={6} sm={3}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Short Answer"
+                            type="number"
+                            value={saCount}
+                            onChange={(e) => setSaCount(Math.max(0, Number(e.target.value)))}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: '#fff' } }}
+                          />
+                        </Grid>
+                        <Grid item xs={6} sm={3}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Essay"
+                            type="number"
+                            value={essayCount}
+                            onChange={(e) => setEssayCount(Math.max(0, Number(e.target.value)))}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: '#fff' } }}
+                          />
+                        </Grid>
+                      </Grid>
+
+                      <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                          Active: {activeQuestionCount} questions
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>
+                          Total Pool: {totalGeneratedCount} items (+{extraCount} anti-cheat)
+                        </Typography>
                       </Box>
-                    ))}
-                    <Button startIcon={<Add />} onClick={addTopic} size="small" sx={{ fontWeight: 700 }}>
-                      Add Alignment Topic
-                    </Button>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          </Box>
+                    </Box>
+
+                    {/* Compact Upload Bar (Syllabus, TOS, Materials) */}
+                    <Box sx={{ p: 2, bgcolor: '#faf5ff', borderRadius: 2.5, border: '1px solid #f3e8ff' }}>
+                      <Typography variant="caption" sx={{ fontWeight: 750, color: '#6b21a8', display: 'block', mb: 1 }}>
+                        Attach Course Materials (Optional Alignment)
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        <Button
+                          variant={syllabus ? 'contained' : 'outlined'}
+                          color="secondary"
+                          component="label"
+                          size="small"
+                          startIcon={<Upload />}
+                          sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.8rem' }}
+                        >
+                          {syllabus ? syllabus.name : 'Attach Syllabus'}
+                          <input type="file" hidden accept=".pdf,.doc,.docx" onChange={(e) => handleFileUpload(e, 'syllabus')} />
+                        </Button>
+
+                        <Button
+                          variant={tos ? 'contained' : 'outlined'}
+                          color="secondary"
+                          component="label"
+                          size="small"
+                          startIcon={<Upload />}
+                          sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.8rem' }}
+                        >
+                          {tos ? tos.name : 'Attach TOS'}
+                          <input type="file" hidden accept=".pdf,.doc,.docx,.xlsx" onChange={(e) => handleFileUpload(e, 'tos')} />
+                        </Button>
+
+                        <Button
+                          variant={materials.length > 0 ? 'contained' : 'outlined'}
+                          color="secondary"
+                          component="label"
+                          size="small"
+                          startIcon={<Upload />}
+                          sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.8rem' }}
+                        >
+                          {materials.length > 0 ? `${materials.length} Slides/Files` : 'Add Slides'}
+                          <input type="file" hidden multiple accept=".pdf,.doc,.docx,.ppt,.pptx" onChange={(e) => handleFileUpload(e, 'materials')} />
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
         )}
 
         {/* Step 2: Summary checklist & Verification (Unified Step) */}
@@ -1128,7 +1016,7 @@ export default function ExamGenerator() {
               {/* Left Column: Config Profile */}
               <Grid item xs={12} md={8}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
-                  
+
                   {/* Summary Profile */}
                   <Card variant="outlined" sx={{ borderRadius: 4, borderColor: '#cbd5e1', borderLeft: '6px solid #2563eb', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
                     <CardContent sx={{ p: 3.5 }}>
@@ -1258,7 +1146,7 @@ export default function ExamGenerator() {
               {/* Sidebar Matrix Manifest (Upgraded Design) */}
               <Grid item xs={12} md={4}>
                 <Card variant="outlined" sx={{ borderRadius: 4, borderColor: '#6366f1', bgcolor: 'rgba(99,102,241,0.01)', overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  
+
                   {/* Indigo Mini Header Banner */}
                   <Box sx={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', p: 3, color: 'white', textAlign: 'center' }}>
                     <AutoAwesome sx={{ fontSize: 28, mb: 1, color: '#e0e7ff' }} />
@@ -1327,32 +1215,98 @@ export default function ExamGenerator() {
                   }}
                 />
                 <Typography variant="h5" gutterBottom fontWeight="black" sx={{ color: '#0f172a', letterSpacing: '-0.02em' }}>
-                  Constructing Exam Items Pool...
+                  {aiEngine === 'gemini' ? `Google Gemini (${geminiModel}) Generating Exam...` : `Ollama (${ollamaModel}) AI Generating Exam...`}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: 'auto', px: 2 }}>
-                  Analyzing source files and building {totalGeneratedCount} high-fidelity items ({activeQuestionCount} active drawer items, {extraCount} extra anti-cheat items).
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 4, maxWidth: 550, mx: 'auto', px: 2 }}>
+                  {generationStatusText || `Analyzing source files and building ${totalGeneratedCount} high-fidelity items (${activeQuestionCount} active drawer items, ${extraCount} extra anti-cheat items).`}
                 </Typography>
                 <LinearProgress sx={{ maxWidth: 400, mx: 'auto', height: 6, borderRadius: 3 }} />
               </Box>
             ) : (
               <Box>
-                <Alert severity="success" sx={{ mb: 3.5, borderRadius: 3, border: '1px solid #bcf0da' }}>
-                  Generation complete! Below are all <strong>{generatedQuestions.length} generated items</strong>.
-                  You can edit texts, alter point structures, delete items, append custom entries, or invoke **Smart AI Regeneration** to fine-tune specific items.
-                </Alert>
+                {/* Modern AI Generation & Connection Status Banner */}
+                <Card
+                  variant="outlined"
+                  sx={{
+                    mb: 3.5,
+                    borderRadius: 4,
+                    borderColor: generationError ? '#fcd34d' : '#86efac',
+                    bgcolor: generationError ? '#fffbeb' : '#f0fdf4',
+                    p: { xs: 2.5, md: 3 },
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.03)'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 3,
+                        bgcolor: generationError ? '#fef3c7' : '#dcfce7',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <CheckCircle sx={{ color: generationError ? '#d97706' : '#16a34a', fontSize: 26 }} />
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle1" fontWeight={900} sx={{ color: generationError ? '#92400e' : '#14532d', lineHeight: 1.2 }}>
+                          {generationError ? 'Question Bank Built (Topic Engine Fallback)' : 'Question Bank Successfully Generated!'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: generationError ? '#b45309' : '#166534', mt: 0.5, fontWeight: 500 }}>
+                          {aiEngine === 'gemini' 
+                            ? `Engine: Google Gemini AI (${geminiModel})` 
+                            : `Engine: Local Ollama AI (${ollamaModel})`} &bull; Created <strong>{generatedQuestions.length} total items</strong>
+                        </Typography>
+                      </Box>
+                    </Box>
 
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, gap: 2, mb: 3 }}>
-                  <Typography variant="h6" fontWeight="bold">
-                    Interactive Pool Editor ({generatedQuestions.length} items total)
-                  </Typography>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      size="large"
+                      startIcon={<Save />}
+                      onClick={handleSaveExam}
+                      sx={{
+                        borderRadius: 3,
+                        px: 3.5,
+                        py: 1.2,
+                        fontWeight: 800,
+                        textTransform: 'none',
+                        boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)',
+                        '&:hover': { boxShadow: '0 6px 18px rgba(22, 163, 74, 0.35)' }
+                      }}
+                    >
+                      Save Exam to Repository
+                    </Button>
+                  </Box>
+                  {generationError && (
+                    <Typography variant="caption" sx={{ display: 'block', mt: 1.5, color: '#b45309', fontWeight: 600, bgcolor: '#fef3c7', p: 1, borderRadius: 2 }}>
+                      {generationError} Note: To use real local AI models, launch Ollama in terminal (<code>ollama serve</code>) and select a pulled model.
+                    </Typography>
+                  )}
+                </Card>
+
+                {/* Top Action & View Toolbar */}
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'stretch', md: 'center' }, gap: 2, mb: 3.5, p: 2, bgcolor: '#f8fafc', borderRadius: 3.5, border: '1px solid #e2e8f0' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                    <Typography variant="h6" fontWeight="bold" sx={{ color: '#0f172a', mr: 1 }}>
+                      Review & Edit Questions
+                    </Typography>
+                    <Chip label={`Active Exam: ${activeQuestionCount}`} color="primary" size="small" sx={{ fontWeight: 800 }} />
+                    <Chip label={`Anti-Cheat Pool: +${extraCount}`} color="secondary" size="small" sx={{ fontWeight: 800 }} />
+                    <Chip label={`Total: ${generatedQuestions.length}`} variant="outlined" size="small" sx={{ fontWeight: 800 }} />
+                  </Box>
+
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-                    <FormControl size="small" sx={{ minWidth: 150 }}>
-                      <InputLabel>Type to Add</InputLabel>
+                    <FormControl size="small" sx={{ minWidth: 140 }}>
+                      <InputLabel>Add Type</InputLabel>
                       <Select
                         value={newQuestionType}
-                        label="Type to Add"
+                        label="Add Type"
                         onChange={(e) => setNewQuestionType(e.target.value as string)}
-                        sx={{ borderRadius: 2 }}
+                        sx={{ borderRadius: 2, bgcolor: 'white' }}
                       >
                         <MenuItem value="multiple-choice">Multiple Choice</MenuItem>
                         <MenuItem value="true-false">True / False</MenuItem>
@@ -1360,14 +1314,14 @@ export default function ExamGenerator() {
                         <MenuItem value="essay">Essay</MenuItem>
                       </Select>
                     </FormControl>
-                    <Button variant="outlined" startIcon={<Add />} onClick={() => handleAddNewQuestion(newQuestionType)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}>
+                    <Button variant="outlined" startIcon={<Add />} onClick={() => handleAddNewQuestion(newQuestionType)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, bgcolor: 'white' }}>
                       Add Question
                     </Button>
                     <Button
-                      variant="contained"
+                      variant={isPreviewMode ? 'contained' : 'outlined'}
                       color="secondary"
                       onClick={() => setIsPreviewMode(!isPreviewMode)}
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
                     >
                       {isPreviewMode ? 'Switch to Editor' : 'Preview Layout'}
                     </Button>
@@ -1505,7 +1459,7 @@ export default function ExamGenerator() {
                             ) : (
                               /* STACKED VERTICAL EDITOR MODE */
                               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
-                                
+
                                 {/* Question Text (Full Width) */}
                                 <TextField
                                   fullWidth
@@ -1545,12 +1499,12 @@ export default function ExamGenerator() {
                                     <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#334155' }}>
                                       Configure Multiple Choice Keys and Options
                                     </Typography>
-                                    
+
                                     {q.options.map((opt: string, optIdx: number) => {
                                       const isCorrectOpt = q.correctAnswer === optIdx;
                                       return (
                                         <Box key={optIdx} sx={{ display: 'flex', flexDirection: 'column', gap: 1.2 }}>
-                                          
+
                                           {/* Key Selection Indicator Header */}
                                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <Radio

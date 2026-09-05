@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router';
-import { useAuth, mockUsers } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { useEffect } from 'react';
 import {
   AppBar,
@@ -97,7 +97,7 @@ const theme = createTheme({
 });
 
 export default function RootLayout() {
-  const { currentUser, logout, switchAccount, isAuthenticated, classrooms } = useAuth();
+  const { currentUser, users, logout, switchAccount, isAuthenticated, classrooms } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -113,6 +113,8 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isAuthenticated && location.pathname !== '/') {
       navigate('/');
+    } else if (isAuthenticated && location.pathname === '/') {
+      navigate('/dashboard');
     }
   }, [isAuthenticated, navigate, location.pathname]);
 
@@ -149,7 +151,7 @@ export default function RootLayout() {
               borderBottom: '1px solid rgba(255,255,255,0.1)',
             }}
           >
-            <Toolbar sx={{ maxWidth: 1200, width: '100%', mx: 'auto', px: { xs: 2, md: 3 } }}>
+            <Toolbar sx={{ maxWidth: '100%', width: '100%', mx: 'auto', px: { xs: 2, sm: 3, md: 5, lg: 6 } }}>
               <IconButton
                 color="inherit"
                 aria-label="open drawer"
@@ -266,7 +268,7 @@ export default function RootLayout() {
                         Switch Account
                       </Typography>
                     </MenuItem>
-                    {mockUsers.map((user) => (
+                    {users.map((user) => (
                       <MenuItem
                         key={user.id}
                         onClick={() => handleSwitchAccount(user.id)}
@@ -274,6 +276,7 @@ export default function RootLayout() {
                         sx={{ py: 1, fontSize: '0.875rem' }}
                       >
                         <Avatar
+                          src={user.avatar}
                           sx={{
                             width: 28,
                             height: 28,

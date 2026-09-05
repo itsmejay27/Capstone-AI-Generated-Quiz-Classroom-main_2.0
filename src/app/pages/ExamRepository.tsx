@@ -444,7 +444,7 @@ export default function ExamRepository() {
   const myClassrooms = classrooms.filter((c) => c.instructorId === currentUser?.id);
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: 4, px: { xs: 2, sm: 3, md: 5, lg: 6 } }}>
       <Button
         startIcon={<ArrowBack />}
         onClick={() => navigate('/dashboard')}

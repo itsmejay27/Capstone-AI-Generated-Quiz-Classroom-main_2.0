@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import OllamaConfigControl, { AIEngineType } from '../components/OllamaConfigControl';
+import { generateReviewerWithOllama, extractFilesContent } from '../services/ollamaService';
+import { generateReviewerWithGemini, buildTopicDrivenModules } from '../services/geminiService';
 import {
   Container, Paper, Typography, Box, TextField, Button, Grid,
   FormControl, InputLabel, Select, MenuItem, Chip, LinearProgress,
@@ -13,10 +16,11 @@ import {
 // ─────────────────────────────────────────────
 // Difficulty configuration
 // ─────────────────────────────────────────────
-const DIFFICULTY_CONFIG = {
-  easy:   { moduleCount: 3, itemsPerModule: 5, label: 'Easy – True or False (3 modules × 5 items)',   topics: ['Introduction & Overview', 'Core Concepts & Definitions', 'Review & Practical Application'] },
+const DIFFICULTY_CONFIG: Record<string, any> = {
+  none: { moduleCount: 1, itemsPerModule: 10, label: 'Direct Quiz Only (No Modules – 10 items)', topics: ['Direct Practice Quiz'] },
+  easy: { moduleCount: 3, itemsPerModule: 5, label: 'Easy – True or False (3 modules × 5 items)', topics: ['Introduction & Overview', 'Core Concepts & Definitions', 'Review & Practical Application'] },
   normal: { moduleCount: 5, itemsPerModule: 8, label: 'Normal – Multiple Choice (5 modules × 8 items)', topics: ['Introduction & Fundamentals', 'Key Principles', 'Methods & Approaches', 'Practical Applications', 'Synthesis & Mastery'] },
-  hard:   { moduleCount: 8, itemsPerModule: 12, label: 'Hard – Mixed MC + Identification (8 modules × 12 items)', topics: ['Introduction & Context', 'Foundational Principles', 'Core Methodologies', 'Analytical Frameworks', 'Advanced Applications', 'Critical Evaluation', 'Problem-Solving Strategies', 'Comprehensive Integration'] },
+  hard: { moduleCount: 8, itemsPerModule: 12, label: 'Hard – Mixed MC + Identification (8 modules × 12 items)', topics: ['Introduction & Context', 'Foundational Principles', 'Core Methodologies', 'Analytical Frameworks', 'Advanced Applications', 'Critical Evaluation', 'Problem-Solving Strategies', 'Comprehensive Integration'] },
 };
 
 // ─────────────────────────────────────────────
@@ -123,25 +127,9 @@ function makeMixed(subject: string, topic: string, moduleNum: number) {
   return [...mc, ...id];
 }
 
-function generateModules(subject: string, difficulty: 'easy' | 'normal' | 'hard') {
-  const config = DIFFICULTY_CONFIG[difficulty];
-  return config.topics.map((topic, idx) => {
-    const questions =
-      difficulty === 'easy'   ? makeTrueFalse(subject, topic, idx + 1) :
-      difficulty === 'normal' ? makeMC(subject, topic, idx + 1) :
-                                makeMixed(subject, topic, idx + 1);
-    return {
-      id: `mod-${Date.now()}-${idx}`,
-      number: idx + 1,
-      title: `Module ${idx + 1}: ${topic}`,
-      topic,
-      lessonContent: generateLesson(subject, topic, idx + 1, config.moduleCount),
-      questions,
-      status: 'unlocked',
-      bestScore: null,
-      attempts: 0,
-    };
-  });
+function generateModules(subject: string, difficulty: 'none' | 'easy' | 'normal' | 'hard') {
+  const config = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.normal;
+  return buildTopicDrivenModules(subject, difficulty, config.moduleCount, config.itemsPerModule);
 }
 
 // ─────────────────────────────────────────────
@@ -163,7 +151,13 @@ export default function ReviewerGenerator() {
   // Step 1 – configure
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
-  const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
+  const [difficulty, setDifficulty] = useState<'none' | 'easy' | 'normal' | 'hard'>('normal');
+
+  // AI Engine states
+  const [aiEngine, setAiEngine] = useState<AIEngineType>('gemini');
+  const [geminiModel, setGeminiModel] = useState('gemini-3.5-flash-lite');
+  const [ollamaModel, setOllamaModel] = useState('llama3.2:latest');
+  const [ollamaUrl, setOllamaUrl] = useState('/api/ollama');
 
   const userClassrooms = classrooms.filter((c) =>
     currentUser?.role === 'student'
@@ -173,34 +167,76 @@ export default function ReviewerGenerator() {
   const availableMaterials = selectedClassroomId ? (classroomMaterials[selectedClassroomId] || []) : [];
   const selectedMaterial = availableMaterials.find((m) => m.id === selectedMaterialId);
 
-  const handleGenerate = () => {
-    if (!title.trim() || !subject.trim()) return;
+  const handleGenerate = async () => {
+    if (!title.trim() && !subject.trim() && !promptText.trim()) return;
     setGenerating(true);
-    setTimeout(() => {
-      const config = DIFFICULTY_CONFIG[difficulty];
-      const modules = generateModules(subject, difficulty);
-      const newReviewer = {
-        id: `rev-${Date.now()}`,
-        title,
-        subject,
-        difficulty,
-        difficultyLabel: config.label,
-        moduleCount: config.moduleCount,
-        itemsPerModule: config.itemsPerModule,
-        source: selectedMaterial
-          ? `Classroom: ${selectedMaterial.name}`
-          : uploadedFile ? `File: ${uploadedFile.name}`
+
+    const effectiveSubject = subject.trim() || promptText.trim().substring(0, 40) || 'General Subject';
+    const effectiveTitle = title.trim() || `Reviewer - ${effectiveSubject}`;
+    const effectiveInstructions = promptText.trim() 
+      ? `Topic / Instruction: ${promptText.trim()}`
+      : `Subject: ${effectiveSubject}`;
+
+    const config = DIFFICULTY_CONFIG[difficulty];
+    let modules: any[] = [];
+
+    if (aiEngine === 'gemini') {
+      try {
+        const extractedText = await extractFilesContent([uploadedFile]);
+        modules = await generateReviewerWithGemini({
+          model: geminiModel,
+          subject: effectiveSubject,
+          difficulty,
+          customInstructions: effectiveInstructions,
+          uploadedText: extractedText,
+        });
+      } catch (err: any) {
+        console.error('Gemini reviewer generation failed:', err);
+        alert(`Gemini AI Error: ${err.message || err}`);
+        setGenerating(false);
+        return;
+      }
+    } else {
+      try {
+        const extractedText = await extractFilesContent([uploadedFile]);
+        modules = await generateReviewerWithOllama({
+          model: ollamaModel,
+          subject: effectiveSubject,
+          difficulty,
+          customInstructions: effectiveInstructions,
+          uploadedText: extractedText,
+          baseUrl: ollamaUrl,
+        });
+      } catch (err: any) {
+        console.error('Ollama reviewer generation failed:', err);
+        alert(`Ollama Error: ${err.message || err}`);
+        setGenerating(false);
+        return;
+      }
+    }
+
+    const newReviewer = {
+      id: `rev-${Date.now()}`,
+      title,
+      subject,
+      difficulty,
+      difficultyLabel: config.label,
+      moduleCount: modules.length || config.moduleCount,
+      itemsPerModule: config.itemsPerModule,
+      source: selectedMaterial
+        ? `Classroom: ${selectedMaterial.name}`
+        : uploadedFile ? `File: ${uploadedFile.name}`
           : promptText.trim() ? 'Custom Prompt'
-          : 'Manual Input',
-        modules,
-        currentModuleIndex: 0,
-        status: 'in-progress',
-        createdAt: new Date().toISOString(),
-      };
-      saveReviewer(newReviewer);
-      setGenerating(false);
-      navigate('/reviewer');
-    }, 2600);
+            : 'Manual Input',
+      modules,
+      currentModuleIndex: 0,
+      status: 'in-progress',
+      createdAt: new Date().toISOString(),
+    };
+
+    saveReviewer(newReviewer);
+    setGenerating(false);
+    navigate('/reviewer');
   };
 
   // ── Generating loading screen ──────────────
@@ -212,13 +248,13 @@ export default function ReviewerGenerator() {
             fontSize: 72, color: '#7c3aed', mb: 3,
             animation: 'pulseSpin 3s infinite ease-in-out',
             '@keyframes pulseSpin': {
-              '0%':   { transform: 'rotate(0deg) scale(1)',   filter: 'drop-shadow(0 0 0px rgba(124,58,237,0))' },
-              '50%':  { transform: 'rotate(180deg) scale(1.2)', filter: 'drop-shadow(0 0 18px rgba(124,58,237,0.5))' },
+              '0%': { transform: 'rotate(0deg) scale(1)', filter: 'drop-shadow(0 0 0px rgba(124,58,237,0))' },
+              '50%': { transform: 'rotate(180deg) scale(1.2)', filter: 'drop-shadow(0 0 18px rgba(124,58,237,0.5))' },
               '100%': { transform: 'rotate(360deg) scale(1)', filter: 'drop-shadow(0 0 0px rgba(124,58,237,0))' },
             },
           }} />
           <Typography variant="h5" fontWeight="bold" gutterBottom sx={{ color: '#1e1b4b' }}>
-            Generating your AI Reviewer...
+            {aiEngine === 'gemini' ? `Google Gemini (${geminiModel})` : `Ollama AI (${ollamaModel})`} Generating Reviewer...
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 4, lineHeight: 1.7 }}>
             Creating {DIFFICULTY_CONFIG[difficulty].moduleCount} modules with lesson content and{' '}
@@ -409,8 +445,8 @@ export default function ReviewerGenerator() {
           {(selectedMaterial || uploadedFile || promptText.trim()) && (
             <Alert severity="info" sx={{ mb: 3 }}>
               {selectedMaterial ? `Basing reviewer on: "${selectedMaterial.name}"` :
-               uploadedFile ? `Using uploaded file: "${uploadedFile.name}"` :
-               'Using your custom prompt as study material.'}
+                uploadedFile ? `Using uploaded file: "${uploadedFile.name}"` :
+                  'Using your custom prompt as study material.'}
             </Alert>
           )}
 
@@ -427,6 +463,12 @@ export default function ReviewerGenerator() {
                 <FormControl fullWidth required>
                   <InputLabel>Difficulty Level</InputLabel>
                   <Select value={difficulty} onChange={(e) => setDifficulty(e.target.value as any)} label="Difficulty Level">
+                    <MenuItem value="none">
+                      <Box>
+                        <Typography variant="body2" fontWeight="bold" color="secondary.main">⚡ Direct Quiz Only (No Modules)</Typography>
+                        <Typography variant="caption" color="text.secondary">Single Study Quiz — 10 practice items (No multi-module breaks)</Typography>
+                      </Box>
+                    </MenuItem>
                     <MenuItem value="easy">
                       <Box>
                         <Typography variant="body2" fontWeight="bold">Easy</Typography>
@@ -449,6 +491,20 @@ export default function ReviewerGenerator() {
                 </FormControl>
               </Grid>
             </Grid>
+
+            {/* AI Engine Settings */}
+            <Box sx={{ mt: 1 }}>
+              <OllamaConfigControl
+                engine={aiEngine}
+                onEngineChange={setAiEngine}
+                selectedModel={ollamaModel}
+                onModelChange={setOllamaModel}
+                ollamaUrl={ollamaUrl}
+                onUrlChange={setOllamaUrl}
+                geminiModel={geminiModel}
+                onGeminiModelChange={setGeminiModel}
+              />
+            </Box>
 
             {/* Difficulty summary card */}
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, bgcolor: '#faf5ff', borderColor: '#ddd6fe' }}>

@@ -108,9 +108,10 @@ export default function Dashboard() {
         <Box sx={{ position: 'absolute', bottom: -40, left: '30%', width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
         <Box sx={{ position: 'absolute', top: '20%', left: -30, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
 
-        <Container maxWidth="lg">
+        <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 3, md: 5, lg: 6 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, mb: 3 }}>
             <Avatar
+              src={currentUser?.avatar}
               sx={{
                 width: 64,
                 height: 64,
@@ -130,7 +131,7 @@ export default function Dashboard() {
                 fontWeight={800}
                 sx={{ color: 'white', letterSpacing: '-0.02em', lineHeight: 1.2, fontSize: { xs: '1.5rem', md: '2rem' } }}
               >
-                Welcome back, {currentUser?.name?.split(' ')[0]}!
+                Welcome back, {currentUser?.name}!
               </Typography>
               <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.75)', mt: 0.5, fontSize: '0.95rem' }}>
                 {isInstructor
@@ -229,7 +230,7 @@ export default function Dashboard() {
       </Box>
 
       {/* ── Stats bar ── */}
-      <Container maxWidth="lg" sx={{ mt: -4, mb: 4, position: 'relative', zIndex: 1 }}>
+      <Container maxWidth="xl" sx={{ mt: -4, mb: 4, position: 'relative', zIndex: 1, px: { xs: 2, sm: 3, md: 5, lg: 6 } }}>
         <Paper
           elevation={0}
           sx={{
@@ -293,7 +294,7 @@ export default function Dashboard() {
       </Container>
 
       {/* ── My Classrooms ── */}
-      <Container maxWidth="lg" sx={{ pb: 8 }}>
+      <Container maxWidth="xl" sx={{ pb: 8, px: { xs: 2, sm: 3, md: 5, lg: 6 } }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Box>
             <Typography variant="h5" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
